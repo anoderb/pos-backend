@@ -1,0 +1,16 @@
+# Node modules
+node_modules/
+
+# Local Environment Variables (CRITICAL SECURITY: DO NOT COMMIT)
+.env
+.env.local
+.env.production
+*.env
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS / IDE
+.DS_Store
+Thumbs.db
