@@ -1,11 +1,13 @@
 import { supabaseAdmin } from '../../config/database.js';
 import { auditLog } from '../../utils/audit.js';
 
-// Helper generator nomor transaksi (cth: TRX-260730-0001)
+// Helper generator nomor transaksi anti-collision (cth: TRX-260730-1234567)
 function generateNomorTransaksi() {
-  const dateStr = new Date().toISOString().slice(2, 10).replace(/-/g, '');
-  const randomNum = Math.floor(1000 + Math.random() * 9000);
-  return `TRX-${dateStr}-${randomNum}`;
+  const now = new Date();
+  const dateStr = now.toISOString().slice(2, 10).replace(/-/g, '');
+  const ms = String(now.getTime() % 100000).padStart(5, '0');
+  const rand = String(Math.floor(Math.random() * 100)).padStart(2, '0');
+  return `TRX-${dateStr}-${ms}${rand}`;
 }
 
 export const transaksiService = {
@@ -43,7 +45,7 @@ export const transaksiService = {
         kembalian: kembalian || 0,
         status: 'selesai',
         is_offline: is_offline || false,
-        created_at: payload.created_at || new Date().toISOString(),
+        created_at: new Date().toISOString(),
       })
       .select()
       .single();
@@ -56,14 +58,18 @@ export const transaksiService = {
         transaksi_id: tx.id,
         produk_id: item.produk_id,
         produk_satuan_jual_id: item.produk_satuan_jual_id || null,
-        nama_produk: item.nama_produk,
-        satuan: item.satuan,
-        konversi: item.konversi || 1,
-        qty: item.qty,
-        harga_satuan: item.harga_satuan,
-        diskon: item.diskon || 0,
-        subtotal: item.subtotal,
+        nama_produk: String(item.nama_produk || 'Produk').slice(0, 100),
+        satuan: String(item.satuan || 'pcs').slice(0, 20),
+        konversi: Number(item.konversi) || 1,
+        qty: Number(item.qty) || 0,
+        harga_satuan: Number(item.harga_satuan) || 0,
+        diskon: Number(item.diskon) || 0,
+        subtotal: Number(item.subtotal) || 0,
       }));
+
+      if (itemsToInsert.some(i => i.qty <= 0)) {
+        throw new Error('Qty setiap item harus lebih dari 0');
+      }
 
       const { error: errItems } = await supabaseAdmin.from('transaksi_item').insert(itemsToInsert);
       if (errItems) console.error('Error insert transaksi_item:', errItems);

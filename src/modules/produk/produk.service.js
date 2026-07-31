@@ -363,14 +363,20 @@ export const produkService = {
   },
 
   async updateSatuanBeli(produk_id, sid, payload) {
+    const clean = { ...payload };
+    delete clean.id;
+    delete clean.produk_id;
+    delete clean.created_at;
+    delete clean.updated_at;
+
     const { data, error } = await supabaseAdmin
       .from('produk_satuan_beli')
-      .update(payload)
+      .update(clean)
       .eq('produk_id', produk_id)
       .eq('id', sid)
       .select()
       .single();
-    if (error) throw new Error('Gagal memperbarui satuan beli');
+    if (error) throw new Error('Gagal memperbarui satuan beli: ' + error.message);
     return data;
   },
 

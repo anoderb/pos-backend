@@ -151,13 +151,15 @@ export const konsinyasiService = {
 
     if (!ksn) throw new Error('Konsinyasi tidak ditemukan');
 
-    const total_dibayar_baru = Number(ksn.total_dibayar) + jumlahNum;
+    const total_dibayar_baru = Number(ksn.total_dibayar || 0) + jumlahNum;
+    const total_nilai = Number(ksn.total_nilai || 0);
+    const status_baru = (total_nilai > 0 && total_dibayar_baru >= total_nilai) ? 'selesai' : 'aktif';
 
     const { data: updated, error } = await supabaseAdmin
       .from('konsinyasi')
       .update({
         total_dibayar: total_dibayar_baru,
-        status: 'selesai',
+        status: status_baru,
       })
       .eq('id', id)
       .select()

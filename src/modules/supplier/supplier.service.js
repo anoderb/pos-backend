@@ -14,13 +14,23 @@ export const supplierService = {
   },
 
   async tambah(toko_id, payload) {
+    const clean = { ...payload };
+    delete clean.id;
+    delete clean.toko_id;
+    delete clean.created_at;
+    delete clean.updated_at;
+
+    if (!clean.nama || !clean.nama.trim()) {
+      throw new Error('Nama supplier wajib diisi');
+    }
+
     const { data, error } = await supabaseAdmin
       .from('supplier')
-      .insert({ toko_id, ...payload, aktif: true })
+      .insert({ toko_id, ...clean, aktif: true })
       .select()
       .single();
 
-    if (error) throw new Error('Gagal menambahkan supplier');
+    if (error) throw new Error('Gagal menambahkan supplier: ' + error.message);
     return data;
   },
 
@@ -37,15 +47,21 @@ export const supplierService = {
   },
 
   async update(toko_id, id, payload) {
+    const clean = { ...payload };
+    delete clean.id;
+    delete clean.toko_id;
+    delete clean.created_at;
+    delete clean.updated_at;
+
     const { data, error } = await supabaseAdmin
       .from('supplier')
-      .update(payload)
+      .update(clean)
       .eq('toko_id', toko_id)
       .eq('id', id)
       .select()
       .single();
 
-    if (error) throw new Error('Gagal mengedit supplier');
+    if (error) throw new Error('Gagal mengedit supplier: ' + error.message);
     return data;
   },
 

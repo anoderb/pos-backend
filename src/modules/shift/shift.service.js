@@ -42,7 +42,7 @@ export const shiftService = {
       .eq('status', 'buka')
       .maybeSingle();
 
-    return data;
+    return data || null;
   },
 
   // Tutup Shift
