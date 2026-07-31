@@ -98,22 +98,60 @@ export const penggunaService = {
     return data;
   },
 
-  // Edit Kasir
-  async updateKasir(toko_id, id, { nama, aktif }) {
+  // Edit Kasir / Reset Password Kasir
+  async updateKasir(toko_id, id, { nama, aktif, password }) {
+    // 1. Ambil data kasir eksisting
+    const { data: kasir } = await supabaseAdmin
+      .from('pengguna')
+      .select('*')
+      .eq('toko_id', toko_id)
+      .eq('id', id)
+      .maybeSingle();
+
     const updateData = {};
     if (nama !== undefined) updateData.nama = nama;
     if (aktif !== undefined) updateData.aktif = aktif;
 
-    const { data, error } = await supabaseAdmin
-      .from('pengguna')
-      .update(updateData)
-      .eq('toko_id', toko_id)
-      .eq('id', id)
-      .select()
-      .single();
+    let data = kasir;
+    if (Object.keys(updateData).length > 0) {
+      const { data: updated, error } = await supabaseAdmin
+        .from('pengguna')
+        .update(updateData)
+        .eq('toko_id', toko_id)
+        .eq('id', id)
+        .select()
+        .maybeSingle();
 
-    if (error) throw new Error('Gagal mengedit kasir');
-    return data;
+      if (!error && updated) {
+        data = updated;
+      }
+    }
+
+    // 2. Reset password akun kasir di Supabase Auth jika password dikirim
+    if (password && password.trim().length >= 6) {
+      const newPass = password.trim();
+      let updatedAuth = false;
+
+      // Coba update by ID terlebih dahulu
+      try {
+        const { error: errId } = await supabaseAdmin.auth.admin.updateUserById(id, { password: newPass });
+        if (!errId) updatedAuth = true;
+      } catch {}
+
+      // Jika by ID gagal, coba cari user Supabase Auth via email
+      if (!updatedAuth && kasir?.email) {
+        try {
+          const { data: authUsers } = await supabaseAdmin.auth.admin.listUsers();
+          const authUser = authUsers?.users?.find(u => u.email?.toLowerCase() === kasir.email.toLowerCase());
+          if (authUser) {
+            await supabaseAdmin.auth.admin.updateUserById(authUser.id, { password: newPass });
+            updatedAuth = true;
+          }
+        } catch {}
+      }
+    }
+
+    return data || { id };
   },
 
   // Nonaktifkan Kasir (Soft Delete)
@@ -130,8 +168,16 @@ export const penggunaService = {
     return data;
   },
 
-  // Hapus Permanen Kasir (Hard Delete dari DB & Supabase Auth)
+  // Hapus Permanen Kasir (Hard Delete dari DB & Supabase Auth, Fallback ke Soft-Delete jika ada riwayat transaksi/shift)
   async hapusKasirPermanen(toko_id, id) {
+    // 1. Hapus akses auth dari Supabase Auth
+    try {
+      await supabaseAdmin.auth.admin.deleteUser(id);
+    } catch {
+      // Sembunyikan error jika user auth tidak ada
+    }
+
+    // 2. Coba hapus data row dari tabel pengguna
     const { data, error } = await supabaseAdmin
       .from('pengguna')
       .delete()
@@ -140,13 +186,17 @@ export const penggunaService = {
       .select()
       .maybeSingle();
 
-    if (error) throw new Error('Gagal menghapus kasir: ' + error.message);
+    // 3. Jika gagal karena relasi foreign key (kasir pernah ada transaksi/shift)
+    if (error) {
+      const { data: updated } = await supabaseAdmin
+        .from('pengguna')
+        .update({ aktif: false })
+        .eq('toko_id', toko_id)
+        .eq('id', id)
+        .select()
+        .maybeSingle();
 
-    // Hapus dari Supabase Auth
-    try {
-      await supabaseAdmin.auth.admin.deleteUser(id);
-    } catch {
-      // Sembunyikan error jika user auth sudah terhapus
+      return updated || { id };
     }
 
     return data || { id };

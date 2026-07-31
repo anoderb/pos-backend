@@ -37,6 +37,7 @@ export async function ownerRoutes(fastify, options) {
   fastify.get('/pengguna/:id', ownerTag('Detail Data Kasir'), penggunaController.detail);
   fastify.put('/pengguna/:id', ownerTag('Edit Data Kasir'), penggunaController.update);
   fastify.delete('/pengguna/:id', ownerTag('Nonaktifkan Akun Kasir'), penggunaController.nonaktifkan);
+  fastify.delete('/pengguna/:id/permanen', ownerTag('Hapus Akun Kasir Permanen'), penggunaController.hapusPermanen);
   fastify.get('/pengguna/:id/shift', ownerTag('Histori Shift Staf Kasir'), penggunaController.historiShift);
 
   // --- Master Produk & Multi-Satuan ---
