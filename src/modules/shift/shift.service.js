@@ -99,6 +99,7 @@ export const shiftService = {
       })
       .eq('toko_id', toko_id)
       .eq('id', shift_id)
+      .eq('kasir_id', kasir_id)
       .select()
       .single();
 

@@ -30,15 +30,16 @@ export const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey || supabas
 
 // PostgreSQL Direct Pool (Supabase IPv4 Pooler via DATABASE_URL env)
 const { Pool } = pg;
+const sslConfig = { rejectUnauthorized: process.env.NODE_ENV === 'production' };
 export const dbPool = new Pool(
   process.env.DATABASE_URL
-    ? { connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } }
+    ? { connectionString: process.env.DATABASE_URL, ssl: sslConfig }
     : {
         host: process.env.DATABASE_HOST || 'aws-0-ap-southeast-1.pooler.supabase.com',
         port: Number(process.env.DATABASE_PORT) || 5432,
         user: process.env.DATABASE_USER,
         password: process.env.DATABASE_PASSWORD,
         database: process.env.DATABASE_NAME || 'postgres',
-        ssl: { rejectUnauthorized: false },
+        ssl: sslConfig,
       }
 );

@@ -62,43 +62,48 @@ await fastify.register(fastifyStatic, {
   prefix: '/public/',
 });
 
-// Register Multipart File Upload for ZIP / Model Weights (Max 100MB)
+// Register Multipart File Upload (Max 5MB)
 await fastify.register(fastifyMultipart, {
-  limits: { fileSize: 100 * 1024 * 1024 },
+  limits: { 
+    fileSize: 5 * 1024 * 1024,
+    files: 1,
+  },
 });
 
-// Register Swagger OpenAPI Documentation Generator
-await fastify.register(fastifySwagger, {
-  openapi: {
-    info: {
-      title: 'Tokiva POS REST API Engine Documentation',
-      description: 'Dokumentasi Interaktif REST API Ekosistem SaaS Tokiva POS (tokiva.biz.id)',
-      version: '1.0.0',
-    },
-    servers: [
-      { url: 'http://localhost:5000', description: 'Local Development Server' },
-      { url: 'https://api.tokiva.biz.id', description: 'Production Server' },
-    ],
-    components: {
-      securitySchemes: {
-        bearerAuth: {
-          type: 'http',
-          scheme: 'bearer',
-          bearerFormat: 'JWT',
+// Register Swagger OpenAPI Documentation Generator (Development Only)
+if (process.env.NODE_ENV !== 'production') {
+  await fastify.register(fastifySwagger, {
+    openapi: {
+      info: {
+        title: 'Tokiva POS REST API Engine Documentation',
+        description: 'Dokumentasi Interaktif REST API Ekosistem SaaS Tokiva POS (tokiva.biz.id)',
+        version: '1.0.0',
+      },
+      servers: [
+        { url: 'http://localhost:5000', description: 'Local Development Server' },
+        { url: 'https://api.tokiva.biz.id', description: 'Production Server' },
+      ],
+      components: {
+        securitySchemes: {
+          bearerAuth: {
+            type: 'http',
+            scheme: 'bearer',
+            bearerFormat: 'JWT',
+          },
         },
       },
     },
-  },
-});
+  });
 
-// Register Interactive Swagger UI Web Docs Page at /docs
-await fastify.register(fastifySwaggerUi, {
-  routePrefix: '/docs',
-  uiConfig: {
-    docExpansion: 'list',
-    deepLinking: true,
-  },
-});
+  // Register Interactive Swagger UI Web Docs Page at /docs
+  await fastify.register(fastifySwaggerUi, {
+    routePrefix: '/docs',
+    uiConfig: {
+      docExpansion: 'list',
+      deepLinking: true,
+    },
+  });
+}
 
 // Register Global Rate Limiter
 await fastify.register(rateLimit, {
@@ -115,10 +120,21 @@ await fastify.register(jwt, {
   secret: process.env.JWT_SECRET,
 });
 
-// Centralized Error Handler
+// Security Headers Hook (SEC-04)
+fastify.addHook('onSend', (request, reply, payload, done) => {
+  reply.header('X-Content-Type-Options', 'nosniff');
+  reply.header('X-Frame-Options', 'DENY');
+  reply.header('X-XSS-Protection', '1; mode=block');
+  reply.header('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  reply.header('Referrer-Policy', 'strict-origin-when-cross-origin');
+  reply.header('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  done();
+});
+
+// Centralized Error Handler (SEC-10)
 fastify.setErrorHandler((error, request, reply) => {
   const statusCode = error.statusCode || 500;
-  const message = statusCode === 500 && process.env.NODE_ENV === 'production'
+  const message = statusCode === 500
     ? 'Terjadi kesalahan internal pada server'
     : error.message;
 

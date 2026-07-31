@@ -1,5 +1,15 @@
 import { supabaseAdmin } from '../../config/database.js';
 
+function sanitizeInput(str) {
+  if (!str) return str;
+  return String(str)
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;')
+    .replace(/\//g, '&#x2F;');
+}
+
 export const produkService = {
   // List Produk dengan Filter
   async listProduk(toko_id, { kategori_id, stok_kritis, aktif_ai, search } = {}) {
@@ -28,6 +38,17 @@ export const produkService = {
   async tambahProduk(toko_id, payload) {
     const { nama, barcode, foto_url, kategori_id, satuan_dasar_id, stok, stok_minimum, hpp, harga_jual_default } = payload;
 
+    if (!nama || !nama.trim()) {
+      throw new Error('Nama produk wajib diisi');
+    }
+    if (hpp === undefined || hpp === null || Number(hpp) <= 0) {
+      throw new Error('Harga Modal Beli (HPP) wajib diisi dan harus lebih dari 0');
+    }
+    if (!harga_jual_default || Number(harga_jual_default) <= 0) {
+      throw new Error('Harga jual wajib diisi dan harus lebih dari 0');
+    }
+
+    const namaBersih = sanitizeInput(nama.trim());
     let finalFotoUrl = foto_url || null;
 
     if (foto_url && foto_url.startsWith('data:image')) {
@@ -75,16 +96,16 @@ export const produkService = {
       .from('produk')
       .insert({
         toko_id,
-        nama,
-        barcode,
+        nama: namaBersih,
+        barcode: barcode ? String(barcode).trim() : null,
         foto_url: finalFotoUrl,
         kategori_id,
         satuan_dasar_id,
         class_produk_id,
         class_status,
-        stok: stok || 0,
-        stok_minimum: stok_minimum || 0,
-        hpp: hpp || 0,
+        stok: Number(stok) || 0,
+        stok_minimum: Number(stok_minimum) || 0,
+        hpp: Number(hpp) || 0,
         aktif: true,
       })
       .select()
@@ -97,8 +118,8 @@ export const produkService = {
         produk_id: produkBaru.id,
         satuan_id: satuan_dasar_id,
         konversi: 1,
-        harga_ecer: harga_jual_default,
-        barcode,
+        harga_ecer: Number(harga_jual_default),
+        barcode: barcode ? String(barcode).trim() : null,
         is_default: true,
       });
     }
@@ -267,9 +288,14 @@ export const produkService = {
   },
 
   async tambahSatuanJual(produk_id, payload) {
+    const clean = { ...payload };
+    delete clean.id;
+    delete clean.produk_id;
+    delete clean.created_at;
+
     const { data, error } = await supabaseAdmin
       .from('produk_satuan_jual')
-      .insert({ produk_id, ...payload })
+      .insert({ produk_id, ...clean })
       .select()
       .single();
     if (error) throw new Error('Gagal menambah satuan jual: ' + error.message);
@@ -277,9 +303,14 @@ export const produkService = {
   },
 
   async updateSatuanJual(produk_id, sid, payload) {
+    const clean = { ...payload };
+    delete clean.id;
+    delete clean.produk_id;
+    delete clean.created_at;
+
     const { data, error } = await supabaseAdmin
       .from('produk_satuan_jual')
-      .update(payload)
+      .update(clean)
       .eq('produk_id', produk_id)
       .eq('id', sid)
       .select()
@@ -311,9 +342,14 @@ export const produkService = {
   },
 
   async tambahSatuanBeli(produk_id, payload) {
+    const clean = { ...payload };
+    delete clean.id;
+    delete clean.produk_id;
+    delete clean.created_at;
+
     const { data, error } = await supabaseAdmin
       .from('produk_satuan_beli')
-      .insert({ produk_id, ...payload })
+      .insert({ produk_id, ...clean })
       .select()
       .single();
     if (error) throw new Error('Gagal menambah satuan beli: ' + error.message);

@@ -5,7 +5,7 @@ export async function authRoutes(fastify, options) {
   const authRateLimitConfig = {
     config: {
       rateLimit: {
-        max: 5,
+        max: 10,
         timeWindow: '15 minutes',
       },
     },

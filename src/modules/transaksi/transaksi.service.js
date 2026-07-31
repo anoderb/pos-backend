@@ -77,28 +77,34 @@ export const transaksiService = {
           .eq('id', item.produk_id)
           .single();
 
-        if (p) {
-          const stok_sebelum = Number(p.stok);
-          const stok_sesudah = stok_sebelum - qty_dasar;
-
-          // Update stok produk
-          await supabaseAdmin
-            .from('produk')
-            .update({ stok: stok_sesudah })
-            .eq('id', item.produk_id);
-
-          // Audit stock movement
-          await supabaseAdmin.from('stock_movement').insert({
-            toko_id,
-            produk_id: item.produk_id,
-            jenis: 'penjualan',
-            referensi_id: tx.id,
-            referensi_nomor: tx.nomor_transaksi,
-            qty: -qty_dasar,
-            stok_sebelum,
-            stok_sesudah,
-          });
+        if (!p) {
+          throw new Error(`Produk dengan ID ${item.produk_id} tidak ditemukan`);
         }
+
+        const stok_sebelum = Number(p.stok);
+        if (stok_sebelum < qty_dasar) {
+          throw new Error(`Stok tidak mencukupi untuk produk ${item.nama_produk || item.produk_id}. Tersedia: ${stok_sebelum}, Dibutuhkan: ${qty_dasar}`);
+        }
+
+        const stok_sesudah = stok_sebelum - qty_dasar;
+
+        // Update stok produk
+        await supabaseAdmin
+          .from('produk')
+          .update({ stok: stok_sesudah })
+          .eq('id', item.produk_id);
+
+        // Audit stock movement
+        await supabaseAdmin.from('stock_movement').insert({
+          toko_id,
+          produk_id: item.produk_id,
+          jenis: 'penjualan',
+          referensi_id: tx.id,
+          referensi_nomor: tx.nomor_transaksi,
+          qty: -qty_dasar,
+          stok_sebelum,
+          stok_sesudah,
+        });
       }
     }
 
@@ -177,6 +183,14 @@ export const transaksiService = {
 
     if (!tx) throw new Error('Transaksi tidak ditemukan');
     if (tx.status === 'void') throw new Error('Transaksi ini sudah divoid sebelumnya');
+
+    // 🔒 Validasi batas waktu void (24 jam)
+    const txTime = new Date(tx.created_at).getTime();
+    const now = Date.now();
+    const maxVoidMs = 24 * 60 * 60 * 1000;
+    if (now - txTime > maxVoidMs) {
+      throw new Error('Transaksi hanya bisa di-void dalam rentang 24 jam setelah dibuat');
+    }
 
     // 1. Update status transaksi -> void
     const { data: txVoid, error } = await supabaseAdmin

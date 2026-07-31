@@ -18,13 +18,23 @@ export const pelangganService = {
   },
 
   async tambah(toko_id, payload) {
+    const clean = { ...payload };
+    delete clean.id;
+    delete clean.toko_id;
+    delete clean.created_at;
+    delete clean.updated_at;
+
+    if (!clean.nama || !clean.nama.trim()) {
+      throw new Error('Nama pelanggan wajib diisi');
+    }
+
     const { data, error } = await supabaseAdmin
       .from('pelanggan')
-      .insert({ toko_id, ...payload })
+      .insert({ toko_id, ...clean })
       .select()
       .single();
 
-    if (error) throw new Error('Gagal menambahkan pelanggan');
+    if (error) throw new Error('Gagal menambahkan pelanggan: ' + error.message);
     return data;
   },
 
@@ -41,15 +51,21 @@ export const pelangganService = {
   },
 
   async update(toko_id, id, payload) {
+    const clean = { ...payload };
+    delete clean.id;
+    delete clean.toko_id;
+    delete clean.created_at;
+    delete clean.updated_at;
+
     const { data, error } = await supabaseAdmin
       .from('pelanggan')
-      .update(payload)
+      .update(clean)
       .eq('toko_id', toko_id)
       .eq('id', id)
       .select()
       .single();
 
-    if (error) throw new Error('Gagal mengedit pelanggan');
+    if (error) throw new Error('Gagal mengedit pelanggan: ' + error.message);
     return data;
   },
 

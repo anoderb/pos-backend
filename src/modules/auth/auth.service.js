@@ -3,6 +3,24 @@ import { kirimEmail } from '../../utils/resend.js';
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+function validatePasswordComplexity(password) {
+  if (!password || password.length < 8) {
+    throw new Error('Password minimal harus 8 karakter');
+  }
+  if (!/[A-Z]/.test(password)) {
+    throw new Error('Password harus mengandung minimal 1 huruf besar (A-Z)');
+  }
+  if (!/[a-z]/.test(password)) {
+    throw new Error('Password harus mengandung minimal 1 huruf kecil (a-z)');
+  }
+  if (!/[0-9]/.test(password)) {
+    throw new Error('Password harus mengandung minimal 1 angka (0-9)');
+  }
+  if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
+    throw new Error('Password harus mengandung minimal 1 karakter spesial (!@#$%^&*)');
+  }
+}
+
 export const authService = {
   // 1. Registrasi Owner Baru dengan Security Anti-Spam
   async registerOwner({ nama, email, password, nama_toko, alamat_toko, no_telp_toko }) {
@@ -10,9 +28,7 @@ export const authService = {
       throw new Error('Format email tidak valid');
     }
 
-    if (!password || password.length < 8) {
-      throw new Error('Password minimal harus 8 karakter');
-    }
+    validatePasswordComplexity(password);
 
     const { data: existingUser } = await supabaseAdmin
       .from('pengguna')
@@ -129,46 +145,14 @@ export const authService = {
     }
 
     // Step 2: Get profil pengguna (using admin client - bypasses RLS)
-    let { data: profil } = await supabaseAdmin
+    const { data: profil } = await supabaseAdmin
       .from('pengguna')
       .select('*, toko:toko_id(*)')
       .eq('email', email)
       .maybeSingle();
 
-    // Auto-heal missing profil pengguna & toko if user exists in Supabase Auth
-    if (!profil && data?.user) {
-      const nama = email.split('@')[0];
-      const { data: tokoBaru } = await supabaseAdmin
-        .from('toko')
-        .insert({ nama: `Toko ${nama}` })
-        .select()
-        .single();
-
-      const { data: penggunaBaru } = await supabaseAdmin
-        .from('pengguna')
-        .insert({
-          id: data.user.id,
-          nama: nama,
-          email: email,
-          role: 'owner',
-          toko_id: tokoBaru?.id,
-          aktif: true,
-        })
-        .select()
-        .single();
-
-      if (tokoBaru?.id) {
-        await supabaseAdmin.from('toko').update({ owner_id: data.user.id }).eq('id', tokoBaru.id);
-      }
-
-      profil = {
-        ...penggunaBaru,
-        toko: tokoBaru,
-      };
-    }
-
     if (!profil) {
-      throw new Error('Profil pengguna tidak dapat dibuat atau ditemukan');
+      throw new Error('Akun Anda belum terdaftar pada toko mana pun. Silakan hubungi Owner toko.');
     }
 
     // Owner role is always active by default
@@ -277,26 +261,21 @@ export const authService = {
     return { pesan: 'Link reset password telah dikirim ke email Anda.' };
   },
 
-  // 5. Reset Password Baru
-  async resetPassword({ email, new_password }) {
-    if (!new_password || new_password.length < 8) {
-      throw new Error('Password baru minimal 8 karakter');
+  // 5. Reset Password (Kirim Email Magic Link Secure)
+  async resetPassword({ email }) {
+    if (!email || !EMAIL_REGEX.test(email)) {
+      throw new Error('Email tidak valid atau wajib diisi');
     }
 
-    const { data: p } = await supabaseAdmin
-      .from('pengguna')
-      .select('id')
-      .eq('email', email)
-      .single();
-
-    if (!p) throw new Error('User tidak ditemukan');
-
-    const { error } = await supabaseAdmin.auth.admin.updateUserById(p.id, {
-      password: new_password,
+    const { error } = await supabaseAuth.auth.resetPasswordForEmail(email, {
+      redirectTo: 'https://tokiva.biz.id/reset-password',
     });
 
-    if (error) throw new Error('Gagal mereset password: ' + error.message);
-    return { pesan: 'Password berhasil diperbarui. Silakan login kembali.' };
+    if (error) {
+      throw new Error('Gagal mengirim email reset: ' + error.message);
+    }
+
+    return { pesan: 'Link reset password telah dikirim ke email Anda. Silakan cek kotak masuk email Anda.' };
   },
 
   // 6. Refresh Token

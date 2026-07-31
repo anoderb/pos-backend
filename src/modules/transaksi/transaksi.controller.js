@@ -16,9 +16,10 @@ export const transaksiController = {
     let finalShiftId = request.body.shift_id;
     if (!finalShiftId) {
       const { data: activeShift } = await supabaseAdmin
-        .from('shift_kasir')
+        .from('shift')
         .select('id')
         .eq('toko_id', request.toko_id)
+        .eq('kasir_id', request.pengguna.id)
         .eq('status', 'buka')
         .order('created_at', { ascending: false })
         .limit(1)
@@ -27,29 +28,42 @@ export const transaksiController = {
       if (activeShift?.id) {
         finalShiftId = activeShift.id;
       } else {
-        const { data: newShift } = await supabaseAdmin
-          .from('shift_kasir')
-          .insert({
-            toko_id: request.toko_id,
-            kasir_id: request.pengguna.id,
-            saldo_awal: 0,
-            status: 'buka',
-          })
-          .select()
-          .single();
-        finalShiftId = newShift?.id;
+        return reply.code(400).send({
+          berhasil: false,
+          pesan: 'Tidak ada shift aktif. Silakan buka shift terlebih dahulu.',
+        });
       }
     }
 
     const calculatedSubtotal = subtotal || items.reduce((s, i) => s + (Number(i.subtotal) || Number(i.harga_satuan) * Number(i.qty) || 0), 0);
     const calculatedTotal = total || Math.max(0, calculatedSubtotal - (Number(request.body.diskon_total) || 0));
 
+    if (calculatedTotal < 0) {
+      return reply.code(400).send({
+        berhasil: false,
+        pesan: 'Total transaksi tidak boleh negatif',
+      });
+    }
+
+    const nominal = nominal_bayar || calculatedTotal;
+    if (metode_bayar === 'cash' && Number(nominal) < calculatedTotal) {
+      return reply.code(400).send({
+        berhasil: false,
+        pesan: `Uang pembayaran tidak mencukupi. Total: ${calculatedTotal}, Dibayar: ${nominal}`,
+      });
+    }
+
+    const kembalianValue = metode_bayar === 'cash'
+      ? Math.max(0, Number(nominal) - calculatedTotal)
+      : 0;
+
     const payload = {
       ...request.body,
       shift_id: finalShiftId,
       subtotal: calculatedSubtotal,
       total: calculatedTotal,
-      nominal_bayar: nominal_bayar || calculatedTotal,
+      nominal_bayar: nominal,
+      kembalian: kembalianValue,
     };
 
     const tx = await transaksiService.buatTransaksi(request.toko_id, request.pengguna.id, payload);

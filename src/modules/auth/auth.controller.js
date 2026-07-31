@@ -57,13 +57,13 @@ export const authController = {
   },
 
   async resetPassword(request, reply) {
-    const { email, new_password } = request.body || {};
-    if (!email || !new_password) {
-      return reply.code(400).send({ berhasil: false, pesan: 'Email dan new_password wajib diisi' });
+    const { email } = request.body || {};
+    if (!email) {
+      return reply.code(400).send({ berhasil: false, pesan: 'Email wajib diisi' });
     }
 
     try {
-      const hasil = await authService.resetPassword({ email, new_password });
+      const hasil = await authService.resetPassword({ email });
       return reply.send(responseSukses(hasil, hasil.pesan));
     } catch (err) {
       return reply.code(400).send({ berhasil: false, pesan: err.message });
@@ -94,6 +94,12 @@ export const authController = {
   },
 
   async logout(request, reply) {
+    try {
+      await supabaseAuth.auth.signOut();
+    } catch (e) {
+      console.error('Supabase signOut error:', e.message);
+    }
+    reply.clearCookie?.('tokiva_token');
     return reply.send(responseSukses(null, 'Logout berhasil'));
   },
 };
