@@ -58,15 +58,19 @@ export const aiService = {
 
         if (uploadErr) {
           console.error('Upload error detail:', uploadErr);
+          finalFotoUrl = foto_base64.startsWith('data:image') ? foto_base64 : `data:image/jpeg;base64,${foto_base64}`;
         } else {
           const { data: urlData } = supabaseAdmin.storage
             .from('dataset-foto-ai')
             .getPublicUrl(fileName);
-          finalFotoUrl = urlData?.publicUrl || '';
+          finalFotoUrl = urlData?.publicUrl || (foto_base64.startsWith('data:image') ? foto_base64 : `data:image/jpeg;base64,${foto_base64}`);
         }
       } catch (uploadFail) {
         console.error('Gagal upload base64 koreksi:', uploadFail);
+        finalFotoUrl = foto_base64.startsWith('data:image') ? foto_base64 : `data:image/jpeg;base64,${foto_base64}`;
       }
+    } else if (!finalFotoUrl && foto_base64) {
+      finalFotoUrl = foto_base64.startsWith('data:image') ? foto_base64 : `data:image/jpeg;base64,${foto_base64}`;
     }
 
     const { data, error } = await supabaseAdmin

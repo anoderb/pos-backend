@@ -28,6 +28,32 @@ export const produkService = {
   async tambahProduk(toko_id, payload) {
     const { nama, barcode, foto_url, kategori_id, satuan_dasar_id, stok, stok_minimum, hpp, harga_jual_default } = payload;
 
+    let finalFotoUrl = foto_url || null;
+
+    if (foto_url && foto_url.startsWith('data:image')) {
+      try {
+        const base64Data = foto_url.replace(/^data:image\/\w+;base64,/, "");
+        const buffer = Buffer.from(base64Data, 'base64');
+        const fileName = `produk-${toko_id}-${Date.now()}.jpg`;
+
+        const { data: uploadData, error: uploadErr } = await supabaseAdmin.storage
+          .from('produk-foto')
+          .upload(fileName, buffer, {
+            contentType: 'image/jpeg',
+            upsert: true
+          });
+
+        if (!uploadErr) {
+          const { data: urlData } = supabaseAdmin.storage
+            .from('produk-foto')
+            .getPublicUrl(fileName);
+          finalFotoUrl = urlData?.publicUrl || foto_url;
+        }
+      } catch (uploadFail) {
+        console.error('Gagal upload base64 foto produk:', uploadFail);
+      }
+    }
+
     // Check barcode mapping with class_barcode_map
     let class_produk_id = null;
     let class_status = 'unmapped';
@@ -51,7 +77,7 @@ export const produkService = {
         toko_id,
         nama,
         barcode,
-        foto_url,
+        foto_url: finalFotoUrl,
         kategori_id,
         satuan_dasar_id,
         class_produk_id,
@@ -103,6 +129,31 @@ export const produkService = {
   // Edit Produk
   async updateProduk(toko_id, id, payload) {
     const updatePayload = { ...payload };
+
+    // Handle base64 image upload to produk-foto bucket
+    if (updatePayload.foto_url && updatePayload.foto_url.startsWith('data:image')) {
+      try {
+        const base64Data = updatePayload.foto_url.replace(/^data:image\/\w+;base64,/, "");
+        const buffer = Buffer.from(base64Data, 'base64');
+        const fileName = `produk-${toko_id}-${Date.now()}.jpg`;
+
+        const { data: uploadData, error: uploadErr } = await supabaseAdmin.storage
+          .from('produk-foto')
+          .upload(fileName, buffer, {
+            contentType: 'image/jpeg',
+            upsert: true
+          });
+
+        if (!uploadErr) {
+          const { data: urlData } = supabaseAdmin.storage
+            .from('produk-foto')
+            .getPublicUrl(fileName);
+          updatePayload.foto_url = urlData?.publicUrl || updatePayload.foto_url;
+        }
+      } catch (uploadFail) {
+        console.error('Gagal upload base64 foto produk:', uploadFail);
+      }
+    }
 
     // Strip relational joined attributes that don't belong to produk table columns
     const fieldsToRemove = [

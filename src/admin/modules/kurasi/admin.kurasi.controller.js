@@ -10,7 +10,8 @@ export const adminKurasiController = {
           *,
           toko(nama),
           pengguna!koreksi_ai_kasir_id_fkey(nama),
-          produk_dipilih:produk!koreksi_ai_produk_dipilih_id_fkey(nama, barcode)
+          produk_dipilih:produk!koreksi_ai_produk_dipilih_id_fkey(nama, barcode),
+          prediksi_1:produk!koreksi_ai_prediksi_1_produk_id_fkey(nama)
         `)
         .eq('status', 'menunggu')
         .order('created_at', { ascending: false });
