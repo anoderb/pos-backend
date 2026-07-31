@@ -6,7 +6,7 @@ const { Pool } = pg;
 
 async function findWorkingPool() {
   const ref = 'drxudbkupglnzbfmyjif';
-  const pass = process.env.DATABASE_PASSWORD || 'Bandulan112@';
+  const pass = process.env.DATABASE_PASSWORD;
 
   const hosts = [
     'aws-0-ap-southeast-1.pooler.supabase.com',

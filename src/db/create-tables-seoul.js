@@ -9,15 +9,19 @@ const __dirname = path.dirname(__filename);
 async function createAdminTablesOptions() {
   console.log('⚡ Connecting to Supabase PostgreSQL (Seoul ap-northeast-2 with reference option)...');
 
-  const pool = new pg.Pool({
-    user: 'postgres',
-    password: 'Bandulan112@',
-    host: 'aws-0-ap-northeast-2.pooler.supabase.com',
-    port: 5432,
-    database: 'postgres',
-    options: '-c reference=drxudbkupglnzbfmyjif',
-    ssl: { rejectUnauthorized: false }
-  });
+  const pool = new pg.Pool(
+    process.env.DATABASE_URL
+      ? { connectionString: process.env.DATABASE_URL, options: '-c reference=drxudbkupglnzbfmyjif', ssl: { rejectUnauthorized: false } }
+      : {
+          user: process.env.DATABASE_USER || 'postgres',
+          password: process.env.DATABASE_PASSWORD,
+          host: 'aws-0-ap-northeast-2.pooler.supabase.com',
+          port: 5432,
+          database: 'postgres',
+          options: '-c reference=drxudbkupglnzbfmyjif',
+          ssl: { rejectUnauthorized: false }
+        }
+  );
 
   try {
     const client = await pool.connect();
