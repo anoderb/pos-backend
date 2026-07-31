@@ -2,10 +2,21 @@ import { aiService } from './ai.service.js';
 import { responseSukses } from '../../utils/response.js';
 
 export const aiController = {
+  async getActiveModel(request, reply) {
+    const data = await aiService.getActiveModel();
+    if (!data) {
+      return reply.code(404).send({ berhasil: false, pesan: 'Tidak ada model AI yang aktif saat ini' });
+    }
+    return reply.send(responseSukses(data, 'Model AI aktif berhasil diambil'));
+  },
+
   async simpan(request, reply) {
-    const { foto_url, produk_dipilih_id } = request.body || {};
-    if (!foto_url || !produk_dipilih_id) {
-      return reply.code(400).send({ berhasil: false, pesan: 'foto_url dan produk_dipilih_id wajib diisi' });
+    const { foto_url, foto_base64, produk_dipilih_id } = request.body || {};
+    if (!foto_url && !foto_base64) {
+      return reply.code(400).send({ berhasil: false, pesan: 'foto_url atau foto_base64 wajib diisi' });
+    }
+    if (!produk_dipilih_id) {
+      return reply.code(400).send({ berhasil: false, pesan: 'produk_dipilih_id wajib diisi' });
     }
 
     const data = await aiService.simpanKoreksi(request.toko_id, request.pengguna.id, request.body);

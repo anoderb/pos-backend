@@ -4,6 +4,9 @@ import { authenticate, requireOwner } from '../../middleware/auth.js';
 export async function aiRoutes(fastify, options) {
   fastify.addHook('preHandler', authenticate);
 
+  // Kasir & Owner: Ambil Model AI Aktif & Mapping Barcode
+  fastify.get('/active-model', aiController.getActiveModel);
+
   // Kasir & Owner: Simpan Koreksi
   fastify.post('/koreksi', aiController.simpan);
 

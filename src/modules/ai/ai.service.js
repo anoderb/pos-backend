@@ -1,10 +1,37 @@
 import { supabaseAdmin } from '../../config/database.js';
 
 export const aiService = {
-  // 1. Simpan Koreksi Kasir saat AI confidence rendah
+  // Mengambil model aktif dan mapping kelas ke barcode
+  async getActiveModel() {
+    const { data: model, error: modelErr } = await supabaseAdmin
+      .from('model_versi')
+      .select('*')
+      .eq('status', 'aktif')
+      .maybeSingle();
+
+    if (modelErr) throw new Error('Gagal mengambil model aktif: ' + modelErr.message);
+    if (!model) return null;
+
+    const { data: mappings, error: mapErr } = await supabaseAdmin
+      .from('class_barcode_map')
+      .select('barcode, class:class_id(slug)');
+
+    if (mapErr) throw new Error('Gagal mengambil mapping barcode: ' + mapErr.message);
+
+    return {
+      model,
+      mappings: mappings.map(m => ({
+        barcode: m.barcode,
+        class_slug: m.class?.slug
+      }))
+    };
+  },
+
+  // 1. Simpan Koreksi Kasir saat AI confidence rendah dengan Auto Upload Base64 Image
   async simpanKoreksi(toko_id, kasir_id, payload) {
     const {
       foto_url,
+      foto_base64,
       prediksi_1_produk_id,
       prediksi_1_confidence,
       prediksi_2_produk_id,
@@ -14,12 +41,40 @@ export const aiService = {
       produk_dipilih_id,
     } = payload;
 
+    let finalFotoUrl = foto_url || '';
+
+    if (foto_base64) {
+      try {
+        const base64Data = foto_base64.replace(/^data:image\/\w+;base64,/, "");
+        const buffer = Buffer.from(base64Data, 'base64');
+        const fileName = `koreksi-${toko_id}-${Date.now()}.jpg`;
+
+        const { data: uploadData, error: uploadErr } = await supabaseAdmin.storage
+          .from('dataset-foto-ai')
+          .upload(fileName, buffer, {
+            contentType: 'image/jpeg',
+            upsert: true
+          });
+
+        if (uploadErr) {
+          console.error('Upload error detail:', uploadErr);
+        } else {
+          const { data: urlData } = supabaseAdmin.storage
+            .from('dataset-foto-ai')
+            .getPublicUrl(fileName);
+          finalFotoUrl = urlData?.publicUrl || '';
+        }
+      } catch (uploadFail) {
+        console.error('Gagal upload base64 koreksi:', uploadFail);
+      }
+    }
+
     const { data, error } = await supabaseAdmin
       .from('koreksi_ai')
       .insert({
         toko_id,
         kasir_id,
-        foto_url,
+        foto_url: finalFotoUrl,
         prediksi_1_produk_id,
         prediksi_1_confidence,
         prediksi_2_produk_id,
