@@ -64,11 +64,15 @@ export const adminAuthController = {
       );
 
       // Log activity
-      await supabaseAdmin.from('admin_log').insert([{
-        admin_id: admin.id,
-        aksi: 'LOGIN_ADMIN',
-        detail: { ip: request.ip, user_agent: request.headers['user-agent'] },
-      }]).catch(() => {});
+      try {
+        await supabaseAdmin.from('admin_log').insert([{
+          admin_id: admin.id,
+          aksi: 'LOGIN_ADMIN',
+          detail: { ip: request.ip, user_agent: request.headers['user-agent'] },
+        }]);
+      } catch (logErr) {
+        console.error('Gagal mencatat log login admin:', logErr.message);
+      }
 
       return reply.send({
         berhasil: true,
