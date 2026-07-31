@@ -60,10 +60,12 @@ export async function ownerRoutes(fastify, options) {
   fastify.delete('/produk/:id/satuan-beli/:sid', ownerTag('Hapus Satuan Beli'), produkController.hapusSatuanBeli);
 
   // Kategori & Satuan CRUD
+  fastify.get('/kategori', ownerTag('List Kategori Toko'), kategoriController.list);
   fastify.post('/kategori', ownerTag('Tambah Kategori Baru'), kategoriController.tambah);
   fastify.put('/kategori/:id', ownerTag('Edit Kategori'), kategoriController.update);
   fastify.delete('/kategori/:id', ownerTag('Hapus Kategori'), kategoriController.hapus);
 
+  fastify.get('/satuan', ownerTag('List Satuan Custom'), satuanController.list);
   fastify.post('/satuan', ownerTag('Tambah Satuan Custom'), satuanController.tambah);
   fastify.put('/satuan/:id', ownerTag('Edit Satuan Custom'), satuanController.update);
   fastify.delete('/satuan/:id', ownerTag('Hapus Satuan Custom'), satuanController.hapus);

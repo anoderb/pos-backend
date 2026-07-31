@@ -27,11 +27,29 @@ export const produkService = {
     const { data, error } = await query;
     if (error) throw new Error('Gagal mengambil daftar produk: ' + error.message);
 
+    const processed = (data || []).map((p) => {
+      const sjList = p.produk_satuan_jual || [];
+      const defaultSj = sjList.find(s => s.is_default && Number(s.harga_ecer || 0) > 0)
+        || sjList.find(s => Number(s.harga_ecer || 0) > 0)
+        || sjList[0]
+        || {};
+
+      const ecerPrice = Number(defaultSj.harga_ecer || 0);
+      return {
+        ...p,
+        harga_jual_default: ecerPrice,
+        harga_ecer: ecerPrice,
+        harga_grosir: Number(defaultSj.harga_grosir || 0),
+        min_qty_grosir: Number(defaultSj.min_qty_grosir || 5),
+        satuan_jual: sjList,
+      };
+    });
+
     if (stok_kritis === 'true' || stok_kritis === true) {
-      return data.filter((p) => p.stok <= p.stok_minimum);
+      return processed.filter((p) => p.stok <= p.stok_minimum);
     }
 
-    return data;
+    return processed;
   },
 
   // Tambah Produk Baru
@@ -113,15 +131,22 @@ export const produkService = {
 
     if (errProduk) throw new Error('Gagal menambah produk: ' + errProduk.message);
 
-    if (satuan_dasar_id && harga_jual_default) {
-      await supabaseAdmin.from('produk_satuan_jual').insert({
-        produk_id: produkBaru.id,
-        satuan_id: satuan_dasar_id,
-        konversi: 1,
-        harga_ecer: Number(harga_jual_default),
-        barcode: barcode ? String(barcode).trim() : null,
-        is_default: true,
-      });
+    if (harga_jual_default) {
+      let targetSatuanId = satuan_dasar_id;
+      if (!targetSatuanId) {
+        const { data: firstSatuan } = await supabaseAdmin.from('satuan').select('id').limit(1).maybeSingle();
+        targetSatuanId = firstSatuan?.id;
+      }
+      if (targetSatuanId) {
+        await supabaseAdmin.from('produk_satuan_jual').insert({
+          produk_id: produkBaru.id,
+          satuan_id: targetSatuanId,
+          konversi: 1,
+          harga_ecer: Number(harga_jual_default),
+          barcode: barcode ? String(barcode).trim() : null,
+          is_default: true,
+        });
+      }
     }
 
     return produkBaru;
@@ -221,14 +246,39 @@ export const produkService = {
 
     if (error) throw new Error('Gagal mengedit produk: ' + error.message);
 
-    // Update default selling price if provided in payload
-    if (payload.harga_jual_default || payload.harga) {
-      const newPrice = payload.harga_jual_default || payload.harga;
-      await supabaseAdmin
-        .from('produk_satuan_jual')
-        .update({ harga_ecer: newPrice, barcode: payload.barcode || undefined })
-        .eq('produk_id', id)
-        .eq('is_default', true);
+    // Update or insert default selling price if provided in payload
+    if (payload.harga_jual_default !== undefined || payload.harga !== undefined || payload.harga_ecer !== undefined) {
+      const newPrice = Number(payload.harga_jual_default ?? payload.harga_ecer ?? payload.harga ?? 0);
+      if (newPrice >= 0) {
+        const { data: existingSj } = await supabaseAdmin
+          .from('produk_satuan_jual')
+          .select('id')
+          .eq('produk_id', id)
+          .maybeSingle();
+
+        if (existingSj) {
+          await supabaseAdmin
+            .from('produk_satuan_jual')
+            .update({ harga_ecer: newPrice, barcode: payload.barcode || undefined, is_default: true })
+            .eq('id', existingSj.id);
+        } else {
+          let targetSatuanId = data?.satuan_dasar_id || payload.satuan_dasar_id;
+          if (!targetSatuanId) {
+            const { data: firstSatuan } = await supabaseAdmin.from('satuan').select('id').limit(1).maybeSingle();
+            targetSatuanId = firstSatuan?.id;
+          }
+          if (targetSatuanId) {
+            await supabaseAdmin.from('produk_satuan_jual').insert({
+              produk_id: id,
+              satuan_id: targetSatuanId,
+              konversi: 1,
+              harga_ecer: newPrice,
+              barcode: payload.barcode || undefined,
+              is_default: true,
+            });
+          }
+        }
+      }
     }
 
     return data;
