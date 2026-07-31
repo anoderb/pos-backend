@@ -104,6 +104,14 @@ export const produkService = {
   async updateProduk(toko_id, id, payload) {
     const updatePayload = { ...payload };
 
+    // Strip relational joined attributes that don't belong to produk table columns
+    const fieldsToRemove = [
+      'id', 'toko_id', 'created_at', 'updated_at', 'kategori', 'satuan_dasar',
+      'satuan_jual', 'satuan_beli', 'supplier', 'produk_satuan_jual', 'produk_satuan_beli',
+      'produk_supplier', 'harga', 'harga_jual_default', 'produk_satuan_jual_id'
+    ];
+    fieldsToRemove.forEach(f => delete updatePayload[f]);
+
     if (updatePayload.barcode !== undefined) {
       if (updatePayload.barcode && String(updatePayload.barcode).trim()) {
         const { data: mapData } = await supabaseAdmin
@@ -133,7 +141,18 @@ export const produkService = {
       .select()
       .single();
 
-    if (error) throw new Error('Gagal mengedit produk');
+    if (error) throw new Error('Gagal mengedit produk: ' + error.message);
+
+    // Update default selling price if provided in payload
+    if (payload.harga_jual_default || payload.harga) {
+      const newPrice = payload.harga_jual_default || payload.harga;
+      await supabaseAdmin
+        .from('produk_satuan_jual')
+        .update({ harga_ecer: newPrice, barcode: payload.barcode || undefined })
+        .eq('produk_id', id)
+        .eq('is_default', true);
+    }
+
     return data;
   },
 
