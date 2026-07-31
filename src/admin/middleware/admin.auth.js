@@ -1,7 +1,8 @@
 import jwt from 'jsonwebtoken';
 import { supabaseAdmin } from '../../config/database.js';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'tokiva-super-secret-jwt-key-change-this-in-production-2026';
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) throw new Error('FATAL: JWT_SECRET wajib dikonfigurasi di .env');
 
 // Middleware Authenticate Pengguna Admin
 export async function authenticateAdmin(request, reply) {
@@ -15,18 +16,6 @@ export async function authenticateAdmin(request, reply) {
     }
 
     const token = authHeader.split(' ')[1];
-
-    // Handle Demo Admin Token for fast testing
-    if (token && token.startsWith('demo-admin-token-')) {
-      request.admin = {
-        id: 'demo-super-admin-id',
-        nama: 'Super Admin Tokiva (Demo)',
-        email: 'admin.demo@tokiva.biz.id',
-        role: 'super_admin',
-        aktif: true,
-      };
-      return;
-    }
 
     // Verify JWT payload
     let decoded;
