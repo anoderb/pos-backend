@@ -1,4 +1,5 @@
 import { supabaseAdmin } from '../../config/database.js';
+import { auditLog } from '../../utils/audit.js';
 
 // Helper generator nomor transaksi (cth: TRX-260730-0001)
 function generateNomorTransaksi() {
@@ -206,6 +207,15 @@ export const transaksiService = {
       .single();
 
     if (error) throw new Error('Gagal memvoid transaksi');
+
+    await auditLog({
+      toko_id,
+      user_id: void_by_id,
+      aksi: 'void_transaksi',
+      tabel: 'transaksi',
+      record_id: id,
+      detail: { alasan_void, nomor_transaksi: tx.nomor_transaksi },
+    });
 
     // 2. Kembalikan stok produk & catat stock_movement jenis void_penjualan
     if (tx.items) {

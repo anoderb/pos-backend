@@ -147,14 +147,28 @@ export const produkService = {
     return data;
   },
 
-  // Edit Produk
+  // Edit Produk (SEC-22 Whitelist Approach)
   async updateProduk(toko_id, id, payload) {
-    const updatePayload = { ...payload };
+    const ALLOWED_FIELDS = [
+      'nama', 'barcode', 'foto_url', 'kategori_id', 'satuan_dasar_id',
+      'stok', 'stok_minimum', 'hpp', 'aktif_ai'
+    ];
+
+    const updatePayload = {};
+    for (const field of ALLOWED_FIELDS) {
+      if (payload[field] !== undefined) {
+        updatePayload[field] = payload[field];
+      }
+    }
+
+    if (updatePayload.nama) {
+      updatePayload.nama = sanitizeInput(updatePayload.nama.trim());
+    }
 
     // Handle base64 image upload to produk-foto bucket
-    if (updatePayload.foto_url && updatePayload.foto_url.startsWith('data:image')) {
+    if (payload.foto_url && payload.foto_url.startsWith('data:image')) {
       try {
-        const base64Data = updatePayload.foto_url.replace(/^data:image\/\w+;base64,/, "");
+        const base64Data = payload.foto_url.replace(/^data:image\/\w+;base64,/, "");
         const buffer = Buffer.from(base64Data, 'base64');
         const fileName = `produk-${toko_id}-${Date.now()}.jpg`;
 
@@ -169,20 +183,12 @@ export const produkService = {
           const { data: urlData } = supabaseAdmin.storage
             .from('produk-foto')
             .getPublicUrl(fileName);
-          updatePayload.foto_url = urlData?.publicUrl || updatePayload.foto_url;
+          updatePayload.foto_url = urlData?.publicUrl || payload.foto_url;
         }
       } catch (uploadFail) {
         console.error('Gagal upload base64 foto produk:', uploadFail);
       }
     }
-
-    // Strip relational joined attributes that don't belong to produk table columns
-    const fieldsToRemove = [
-      'id', 'toko_id', 'created_at', 'updated_at', 'kategori', 'satuan_dasar',
-      'satuan_jual', 'satuan_beli', 'supplier', 'produk_satuan_jual', 'produk_satuan_beli',
-      'produk_supplier', 'harga', 'harga_jual_default', 'produk_satuan_jual_id'
-    ];
-    fieldsToRemove.forEach(f => delete updatePayload[f]);
 
     if (updatePayload.barcode !== undefined) {
       if (updatePayload.barcode && String(updatePayload.barcode).trim()) {

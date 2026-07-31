@@ -10,10 +10,25 @@ export const produkController = {
   },
 
   async tambah(request, reply) {
-    const { nama } = request.body || {};
-    if (!nama) return reply.code(400).send({ berhasil: false, pesan: 'Nama produk wajib diisi' });
+    const payload = { ...(request.body || {}) };
 
-    const data = await produkService.tambahProduk(request.toko_id, request.body || {});
+    // Map frontend field names to backend schema
+    if (payload.batas_stok_minimum !== undefined && payload.stok_minimum === undefined) {
+      payload.stok_minimum = payload.batas_stok_minimum;
+    }
+    if (payload.stok_awal !== undefined && payload.stok === undefined) {
+      payload.stok = payload.stok_awal;
+    }
+    if (payload.harga_eceran !== undefined && payload.harga_jual_default === undefined) {
+      payload.harga_jual_default = payload.harga_eceran;
+    }
+    if (payload.kode_barcode !== undefined && payload.barcode === undefined) {
+      payload.barcode = payload.kode_barcode;
+    }
+
+    if (!payload.nama) return reply.code(400).send({ berhasil: false, pesan: 'Nama produk wajib diisi' });
+
+    const data = await produkService.tambahProduk(request.toko_id, payload);
     return reply.code(201).send(responseSukses(data, 'Produk baru berhasil ditambahkan'));
   },
 
@@ -23,7 +38,22 @@ export const produkController = {
   },
 
   async update(request, reply) {
-    const data = await produkService.updateProduk(request.toko_id, request.params.id, request.body || {});
+    const payload = { ...(request.body || {}) };
+
+    if (payload.batas_stok_minimum !== undefined && payload.stok_minimum === undefined) {
+      payload.stok_minimum = payload.batas_stok_minimum;
+    }
+    if (payload.stok_awal !== undefined && payload.stok === undefined) {
+      payload.stok = payload.stok_awal;
+    }
+    if (payload.harga_eceran !== undefined && payload.harga_jual_default === undefined) {
+      payload.harga_jual_default = payload.harga_eceran;
+    }
+    if (payload.kode_barcode !== undefined && payload.barcode === undefined) {
+      payload.barcode = payload.kode_barcode;
+    }
+
+    const data = await produkService.updateProduk(request.toko_id, request.params.id, payload);
     return reply.send(responseSukses(data, 'Produk berhasil diperbarui'));
   },
 

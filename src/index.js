@@ -49,9 +49,14 @@ const fastify = Fastify({
   logger: process.env.NODE_ENV === 'development',
 });
 
-// Register CORS with explicit HTTP methods including DELETE & OPTIONS
+// Register CORS with explicit HTTP methods including DELETE & OPTIONS (SEC-05)
 await fastify.register(cors, {
-  origin: process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',') : '*',
+  origin: process.env.CORS_ORIGIN 
+    ? process.env.CORS_ORIGIN.split(',') 
+    : (process.env.NODE_ENV === 'production' 
+        ? (() => { throw new Error('FATAL: CORS_ORIGIN wajib diisi di production'); })()
+        : ['http://localhost:3000', 'http://localhost:5000', 'http://127.0.0.1:3000', 'http://127.0.0.1:5000']
+      ),
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
 });
