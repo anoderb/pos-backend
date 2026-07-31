@@ -25,6 +25,7 @@ export async function adminRoutes(fastify, options) {
 
     // Profile & Password
     protectedAdmin.get('/auth/me', adminTag('Get Current Admin Profile'), adminAuthController.profil);
+    protectedAdmin.get('/auth/profil', adminTag('Get Current Admin Profile (Alias)'), adminAuthController.profil);
     protectedAdmin.post('/auth/ganti-password', adminTag('Ganti Password Admin'), adminAuthController.gantiPassword);
 
     // Dashboard SaaS Metrics
