@@ -88,6 +88,13 @@ export const adminKurasiController = {
       const { catatan } = request.body || {};
       const adminId = request.admin?.id;
 
+      // Get foto_url before updating
+      const { data: item } = await supabaseAdmin
+        .from('koreksi_ai')
+        .select('foto_url')
+        .eq('id', id)
+        .single();
+
       await supabaseAdmin
         .from('koreksi_ai')
         .update({
@@ -97,9 +104,23 @@ export const adminKurasiController = {
         })
         .eq('id', id);
 
+      // Delete photo from Supabase Storage
+      if (item?.foto_url) {
+        try {
+          const url = new URL(item.foto_url);
+          const pathParts = url.pathname.split('/public/');
+          if (pathParts.length === 2) {
+            const [bucket, ...filePath] = pathParts[1].split('/');
+            await supabaseAdmin.storage.from(bucket).remove([filePath.join('/')]);
+          }
+        } catch (e) {
+          console.error('Gagal hapus foto dari storage:', e.message);
+        }
+      }
+
       return reply.send({
         berhasil: true,
-        pesan: 'Koreksi kasir berhasil ditolak',
+        pesan: 'Koreksi kasir berhasil ditolak & foto dihapus',
       });
     } catch (err) {
       return reply.code(500).send({
