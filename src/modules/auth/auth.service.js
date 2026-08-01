@@ -88,6 +88,9 @@ export const authService = {
       .update({ owner_id: penggunaBaru.id })
       .eq('id', tokoBaru.id);
 
+    // Seed satuan default "pcs" untuk toko baru
+    await supabaseAdmin.from('satuan').insert({ toko_id: tokoBaru.id, nama: 'pcs' });
+
     // Kirim email sambutan via Resend (Background safe)
     kirimEmail({
       to: email,
@@ -221,6 +224,7 @@ export const authService = {
       .single();
 
     await supabaseAdmin.from('toko').update({ owner_id: id }).eq('id', tokoBaru.id);
+    await supabaseAdmin.from('satuan').insert({ toko_id: tokoBaru.id, nama: 'pcs' });
 
     return {
       isNewUser: true,
@@ -229,9 +233,9 @@ export const authService = {
     };
   },
 
-  // 4. Lupa Password
+  // 4. Lupa Password — Kirim reset via Supabase
   async lupaPassword(email) {
-    if (!EMAIL_REGEX.test(email)) throw new Error('Format email tidak valid');
+    if (!email || !EMAIL_REGEX.test(email)) throw new Error('Format email tidak valid');
 
     const { data: user } = await supabaseAdmin
       .from('pengguna')
@@ -243,20 +247,13 @@ export const authService = {
       return { pesan: 'Jika email terdaftar, link reset akan dikirim.' };
     }
 
-    const resetLink = `https://tokiva.biz.id/reset-password?email=${encodeURIComponent(email)}`;
+    const { error } = await supabaseAuth.auth.resetPasswordForEmail(email, {
+      redirectTo: 'https://tokiva.biz.id/reset-password',
+    });
 
-    kirimEmail({
-      to: email,
-      subject: 'Reset Password Tokiva POS',
-      html: `
-        <div style="font-family: Arial, sans-serif; padding: 20px;">
-          <h3 style="color: #16A34A;">Halo ${user.nama}, Permintaan Reset Password</h3>
-          <p>Anda menerima email ini karena ada permintaan reset password untuk akun Tokiva POS Anda.</p>
-          <p><a href="${resetLink}" style="background: #16A34A; color: white; padding: 10px 15px; text-decoration: none; border-radius: 5px;">Reset Password Sekarang</a></p>
-          <p style="font-size: 12px; color: #888;">Jika Anda tidak merasa meminta ini, abaikan email ini.</p>
-        </div>
-      `,
-    }).catch(err => console.error('Error sending reset password email:', err.message));
+    if (error) {
+      throw new Error('Gagal mengirim email reset: ' + error.message);
+    }
 
     return { pesan: 'Link reset password telah dikirim ke email Anda.' };
   },

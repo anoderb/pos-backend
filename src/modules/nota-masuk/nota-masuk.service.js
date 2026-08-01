@@ -92,6 +92,7 @@ export const notaMasukService = {
             .upsert({
               produk_id: item.produk_id,
               supplier_id,
+              toko_id,
               harga_beli_terakhir: item.harga_beli,
             });
 

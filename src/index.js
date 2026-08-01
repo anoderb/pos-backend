@@ -127,9 +127,10 @@ fastify.addHook('onSend', (request, reply, payload, done) => {
 // Centralized Error Handler (SEC-10)
 fastify.setErrorHandler((error, request, reply) => {
   const statusCode = error.statusCode || 500;
-  const message = statusCode === 500
-    ? 'Terjadi kesalahan internal pada server'
-    : error.message;
+  const isDev = process.env.NODE_ENV !== 'production';
+  const message = (isDev || statusCode !== 500)
+    ? error.message
+    : 'Terjadi kesalahan internal pada server';
 
   reply.status(statusCode).send({
     berhasil: false,
