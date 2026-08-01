@@ -13,6 +13,21 @@ export const laporanService = {
       .gte('created_at', todayStr);
 
     const omzet_hari_ini = (txHariIni || []).reduce((acc, curr) => acc + Number(curr.total), 0);
+    const total_transaksi_hari_ini = (txHariIni || []).length;
+
+    // Calculate estimasi laba from today's transaction items
+    let estimasi_laba = 0;
+    if (txHariIni && txHariIni.length > 0) {
+      const { data: txItems } = await supabaseAdmin
+        .from('transaksi_item')
+        .select('qty, subtotal, produk:produk_id(hpp)')
+        .in('transaksi_id', txHariIni.map(tx => tx.id));
+      if (txItems) {
+        const totalPendapatan = txItems.reduce((s, i) => s + Number(i.subtotal || 0), 0);
+        const totalHpp = txItems.reduce((s, i) => s + (Number(i.qty) * Number(i.produk?.hpp || 0)), 0);
+        estimasi_laba = totalPendapatan - totalHpp;
+      }
+    }
 
     const { data: produkKritis } = await supabaseAdmin
       .from('produk')
@@ -31,7 +46,8 @@ export const laporanService = {
 
     return {
       omzet_hari_ini,
-      total_transaksi_hari_ini: (txHariIni || []).length,
+      total_transaksi_hari_ini,
+      estimasi_laba,
       total_stok_kritis: stok_kritis.length,
       stok_kritis_list: stok_kritis.slice(0, 5),
       shift_aktif: shiftAktif || null,

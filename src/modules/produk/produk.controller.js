@@ -1,6 +1,16 @@
 import { produkService } from './produk.service.js';
 import { responseSukses } from '../../utils/response.js';
 
+function mapFrontendFields(payload) {
+  const p = { ...payload };
+  if (p.stok_awal !== undefined && p.stok === undefined) p.stok = p.stok_awal;
+  if (p.batas_stok_minimum !== undefined && p.stok_minimum === undefined) p.stok_minimum = p.batas_stok_minimum;
+  if (p.harga_eceran !== undefined && p.harga_jual_default === undefined) p.harga_jual_default = p.harga_eceran;
+  if (p.kode_barcode !== undefined && p.barcode === undefined) p.barcode = p.kode_barcode;
+  if (p.satuan_id !== undefined && p.satuan_dasar_id === undefined) p.satuan_dasar_id = p.satuan_id;
+  return p;
+}
+
 export const produkController = {
   // Produk CRUD
   async list(request, reply) {
@@ -10,21 +20,7 @@ export const produkController = {
   },
 
   async tambah(request, reply) {
-    const payload = { ...(request.body || {}) };
-
-    // Map frontend field names to backend schema
-    if (payload.batas_stok_minimum !== undefined && payload.stok_minimum === undefined) {
-      payload.stok_minimum = payload.batas_stok_minimum;
-    }
-    if (payload.stok_awal !== undefined && payload.stok === undefined) {
-      payload.stok = payload.stok_awal;
-    }
-    if (payload.harga_eceran !== undefined && payload.harga_jual_default === undefined) {
-      payload.harga_jual_default = payload.harga_eceran;
-    }
-    if (payload.kode_barcode !== undefined && payload.barcode === undefined) {
-      payload.barcode = payload.kode_barcode;
-    }
+    const payload = mapFrontendFields(request.body || {});
 
     if (!payload.nama) return reply.code(400).send({ berhasil: false, pesan: 'Nama produk wajib diisi' });
 
@@ -38,20 +34,7 @@ export const produkController = {
   },
 
   async update(request, reply) {
-    const payload = { ...(request.body || {}) };
-
-    if (payload.batas_stok_minimum !== undefined && payload.stok_minimum === undefined) {
-      payload.stok_minimum = payload.batas_stok_minimum;
-    }
-    if (payload.stok_awal !== undefined && payload.stok === undefined) {
-      payload.stok = payload.stok_awal;
-    }
-    if (payload.harga_eceran !== undefined && payload.harga_jual_default === undefined) {
-      payload.harga_jual_default = payload.harga_eceran;
-    }
-    if (payload.kode_barcode !== undefined && payload.barcode === undefined) {
-      payload.barcode = payload.kode_barcode;
-    }
+    const payload = mapFrontendFields(request.body || {});
 
     const data = await produkService.updateProduk(request.toko_id, request.params.id, payload);
     return reply.send(responseSukses(data, 'Produk berhasil diperbarui'));

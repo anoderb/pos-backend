@@ -16,25 +16,6 @@ import { kasirRoutes } from './routes/kasir/kasir.routes.js';
 import { ownerRoutes } from './routes/owner/owner.routes.js';
 import { adminRoutes } from './admin/routes/admin.routes.js';
 
-// Legacy Module Imports
-import { tokoRoutes } from './modules/toko/toko.route.js';
-import { penggunaRoutes } from './modules/pengguna/pengguna.route.js';
-import { kategoriRoutes } from './modules/kategori/kategori.route.js';
-import { satuanRoutes } from './modules/satuan/satuan.route.js';
-import { produkRoutes } from './modules/produk/produk.route.js';
-import { supplierRoutes } from './modules/supplier/supplier.route.js';
-import { pelangganRoutes } from './modules/pelanggan/pelanggan.route.js';
-import { shiftRoutes } from './modules/shift/shift.route.js';
-import { transaksiRoutes } from './modules/transaksi/transaksi.route.js';
-import { notaMasukRoutes } from './modules/nota-masuk/nota-masuk.route.js';
-import { hutangRoutes } from './modules/hutang/hutang.route.js';
-import { returnSupplierRoutes } from './modules/return-supplier/return-supplier.route.js';
-import { konsinyasiRoutes } from './modules/konsinyasi/konsinyasi.route.js';
-import { stockAdjustmentRoutes } from './modules/stock-adjustment/stock-adjustment.route.js';
-import { opnameRoutes } from './modules/opname/opname.route.js';
-import { laporanRoutes } from './modules/laporan/laporan.route.js';
-import { aiRoutes } from './modules/ai/ai.route.js';
-
 dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
@@ -174,32 +155,13 @@ fastify.get('/api', async () => ({
   docs_url: 'http://localhost:5000/docs',
 }));
 
-// --- Public Auth Routes ---
+// Public Auth Routes
 fastify.register(authRoutes, { prefix: '/api/auth' });
 
-// --- Clean Role Namespaces ---
+// Clean Role Namespaces
 fastify.register(kasirRoutes, { prefix: '/api/kasir' });
 fastify.register(ownerRoutes, { prefix: '/api/owner' });
 fastify.register(adminRoutes, { prefix: '/api/admin' });
-
-// --- Legacy Routes (Preserved for compatibility) ---
-fastify.register(tokoRoutes, { prefix: '/api/toko' });
-fastify.register(penggunaRoutes, { prefix: '/api/pengguna' });
-fastify.register(kategoriRoutes, { prefix: '/api/kategori' });
-fastify.register(satuanRoutes, { prefix: '/api/satuan' });
-fastify.register(produkRoutes, { prefix: '/api/produk' });
-fastify.register(supplierRoutes, { prefix: '/api/supplier' });
-fastify.register(pelangganRoutes, { prefix: '/api/pelanggan' });
-fastify.register(shiftRoutes, { prefix: '/api/shift' });
-fastify.register(transaksiRoutes, { prefix: '/api/transaksi' });
-fastify.register(notaMasukRoutes, { prefix: '/api/nota-masuk' });
-fastify.register(hutangRoutes, { prefix: '/api/hutang' });
-fastify.register(returnSupplierRoutes, { prefix: '/api/return-supplier' });
-fastify.register(konsinyasiRoutes, { prefix: '/api/konsinyasi' });
-fastify.register(stockAdjustmentRoutes, { prefix: '/api/stock-adjustment' });
-fastify.register(opnameRoutes, { prefix: '/api/opname' });
-fastify.register(laporanRoutes, { prefix: '/api/laporan' });
-fastify.register(aiRoutes, { prefix: '/api/ai' });
 
 // Start Server
 const PORT = process.env.PORT || 5000;

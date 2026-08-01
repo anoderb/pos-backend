@@ -45,5 +45,6 @@ export async function kasirRoutes(fastify, options) {
   fastify.get('/nota-masuk/:id', { schema: { tags: ['Kasir Operations (/api/kasir)'], summary: 'Detail Nota Masuk' } }, notaMasukController.detail);
 
   // --- Koreksi AI Scanner ---
+  fastify.get('/ai/active-model', { schema: { tags: ['Kasir Operations (/api/kasir)'], summary: 'Get Model AI Aktif & Barcode Mapping' } }, aiController.getActiveModel);
   fastify.post('/ai/koreksi', { schema: { tags: ['Kasir Operations (/api/kasir)'], summary: 'Simpan Koreksi Visual Scanner AI' } }, aiController.simpan);
 }

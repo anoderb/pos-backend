@@ -59,9 +59,7 @@ export const produkService = {
     if (!nama || !nama.trim()) {
       throw new Error('Nama produk wajib diisi');
     }
-    if (hpp === undefined || hpp === null || Number(hpp) <= 0) {
-      throw new Error('Harga Modal Beli (HPP) wajib diisi dan harus lebih dari 0');
-    }
+
     if (!harga_jual_default || Number(harga_jual_default) <= 0) {
       throw new Error('Harga jual wajib diisi dan harus lebih dari 0');
     }
@@ -110,6 +108,25 @@ export const produkService = {
       }
     }
 
+    // Resolve satuan_dasar_id: if not UUID, treat as name → find or create
+    let resolvedSatuanId = null;
+    if (satuan_dasar_id) {
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(satuan_dasar_id);
+      if (isUuid) {
+        resolvedSatuanId = satuan_dasar_id;
+      } else {
+        const { data: byName } = await supabaseAdmin.from('satuan')
+          .select('id').eq('toko_id', toko_id).eq('nama', satuan_dasar_id).maybeSingle();
+        if (byName) {
+          resolvedSatuanId = byName.id;
+        } else {
+          const { data: created } = await supabaseAdmin.from('satuan')
+            .insert({ toko_id, nama: satuan_dasar_id }).select('id').single();
+          resolvedSatuanId = created?.id;
+        }
+      }
+    }
+
     const { data: produkBaru, error: errProduk } = await supabaseAdmin
       .from('produk')
       .insert({
@@ -118,7 +135,7 @@ export const produkService = {
         barcode: barcode ? String(barcode).trim() : null,
         foto_url: finalFotoUrl,
         kategori_id,
-        satuan_dasar_id,
+        satuan_dasar_id: resolvedSatuanId,
         class_produk_id,
         class_status,
         stok: Number(stok) || 0,
@@ -132,10 +149,16 @@ export const produkService = {
     if (errProduk) throw new Error('Gagal menambah produk: ' + errProduk.message);
 
     if (harga_jual_default) {
-      let targetSatuanId = satuan_dasar_id;
+      let targetSatuanId = resolvedSatuanId;
       if (!targetSatuanId) {
-        const { data: firstSatuan } = await supabaseAdmin.from('satuan').select('id').limit(1).maybeSingle();
+        const { data: firstSatuan } = await supabaseAdmin
+          .from('satuan').select('id').eq('toko_id', toko_id).limit(1).maybeSingle();
         targetSatuanId = firstSatuan?.id;
+      }
+      if (!targetSatuanId) {
+        const { data: newSatuan } = await supabaseAdmin
+          .from('satuan').insert({ toko_id, nama: 'pcs' }).select('id').single();
+        targetSatuanId = newSatuan?.id;
       }
       if (targetSatuanId) {
         await supabaseAdmin.from('produk_satuan_jual').insert({
@@ -143,6 +166,8 @@ export const produkService = {
           satuan_id: targetSatuanId,
           konversi: 1,
           harga_ecer: Number(harga_jual_default),
+          harga_grosir: Number(payload.harga_grosir) || 0,
+          min_qty_grosir: Number(payload.min_qty_grosir) || 0,
           barcode: barcode ? String(barcode).trim() : null,
           is_default: true,
         });
@@ -188,6 +213,19 @@ export const produkService = {
 
     if (updatePayload.nama) {
       updatePayload.nama = sanitizeInput(updatePayload.nama.trim());
+    }
+
+    // Resolve satuan_dasar_id name→UUID before updating produk table
+    if (updatePayload.satuan_dasar_id && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(updatePayload.satuan_dasar_id)) {
+      const { data: byName } = await supabaseAdmin.from('satuan')
+        .select('id').eq('toko_id', toko_id).eq('nama', updatePayload.satuan_dasar_id).maybeSingle();
+      if (byName) {
+        updatePayload.satuan_dasar_id = byName.id;
+      } else {
+        const { data: created } = await supabaseAdmin.from('satuan')
+          .insert({ toko_id, nama: updatePayload.satuan_dasar_id }).select('id').single();
+        updatePayload.satuan_dasar_id = created?.id || null;
+      }
     }
 
     // Handle base64 image upload to produk-foto bucket
@@ -263,9 +301,21 @@ export const produkService = {
             .eq('id', existingSj.id);
         } else {
           let targetSatuanId = data?.satuan_dasar_id || payload.satuan_dasar_id;
+          // Resolve name→UUID if targetSatuanId is not a valid UUID
+          if (targetSatuanId && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(targetSatuanId)) {
+            const { data: byName } = await supabaseAdmin.from('satuan')
+              .select('id').eq('toko_id', toko_id).eq('nama', targetSatuanId).maybeSingle();
+            targetSatuanId = byName?.id || null;
+          }
           if (!targetSatuanId) {
-            const { data: firstSatuan } = await supabaseAdmin.from('satuan').select('id').limit(1).maybeSingle();
+            const { data: firstSatuan } = await supabaseAdmin
+              .from('satuan').select('id').eq('toko_id', toko_id).limit(1).maybeSingle();
             targetSatuanId = firstSatuan?.id;
+          }
+          if (!targetSatuanId) {
+            const { data: newSatuan } = await supabaseAdmin
+              .from('satuan').insert({ toko_id, nama: 'pcs' }).select('id').single();
+            targetSatuanId = newSatuan?.id;
           }
           if (targetSatuanId) {
             await supabaseAdmin.from('produk_satuan_jual').insert({
