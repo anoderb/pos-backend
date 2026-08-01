@@ -41,6 +41,7 @@ export async function adminRoutes(fastify, options) {
     protectedAdmin.post('/dataset/class', adminTag('Tambah Class Produk AI Baru'), adminDatasetController.tambahClass);
     protectedAdmin.get('/dataset/foto', adminTag('Daftar Foto Dataset AI (HuggingFace)'), adminDatasetController.listFoto);
     protectedAdmin.get('/dataset/unmapped', adminTag('Daftar Produk Belum Ter-mapping'), adminDatasetController.listUnmapped);
+    protectedAdmin.delete('/dataset/unmapped/:id', adminTag('Hapus Produk Unmapped'), adminDatasetController.deleteUnmapped);
     protectedAdmin.post('/dataset/map-class', adminTag('Assign Produk ke Class AI Existing'), adminDatasetController.mapClass);
     protectedAdmin.post('/dataset/create-class-and-map', adminTag('Buat Class AI Baru & Map Produk'), adminDatasetController.createClassAndMap);
     protectedAdmin.post('/dataset/sync-huggingface', adminTag('Trigger Manual Batch Sync ke HuggingFace'), adminDatasetController.triggerSync);

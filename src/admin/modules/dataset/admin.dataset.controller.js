@@ -219,6 +219,24 @@ export const adminDatasetController = {
     }
   },
 
+  // DELETE /api/admin/dataset/unmapped/:id (Soft-delete produk unmapped)
+  async deleteUnmapped(request, reply) {
+    try {
+      const { id } = request.params || {};
+      const { data, error } = await supabaseAdmin
+        .from('produk')
+        .update({ aktif: false })
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return reply.send({ berhasil: true, pesan: 'Produk berhasil dihapus', data });
+    } catch (err) {
+      return reply.code(500).send({ berhasil: false, pesan: 'Gagal menghapus produk: ' + err.message });
+    }
+  },
+
   // POST /api/admin/dataset/map-class (Assign product(s) to existing AI class)
   async mapClass(request, reply) {
     try {
