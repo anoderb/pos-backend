@@ -200,6 +200,7 @@ export const adminDatasetController = {
         .from('produk')
         .select('*, toko:toko_id(nama), kategori:kategori_id(nama)')
         .or('class_status.eq.unmapped,class_status.is.null')
+        .eq('aktif', true)
         .order('created_at', { ascending: false });
 
       if (search) {
