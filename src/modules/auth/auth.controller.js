@@ -57,13 +57,38 @@ export const authController = {
   },
 
   async resetPassword(request, reply) {
-    const { email } = request.body || {};
+    const { email, new_password } = request.body || {};
+
+    // Mode 1: Ganti password langsung (user sudah login JWT)
+    if (new_password) {
+      if (!request.pengguna?.email) {
+        return reply.code(401).send({ berhasil: false, pesan: 'Anda harus login untuk mengubah password' });
+      }
+      const hasil = await authService.gantiPassword(request.pengguna.email, new_password);
+      return reply.send(responseSukses(hasil, hasil.pesan));
+    }
+
+    // Mode 2: Kirim email reset link
     if (!email) {
       return reply.code(400).send({ berhasil: false, pesan: 'Email wajib diisi' });
     }
 
     try {
       const hasil = await authService.resetPassword({ email });
+      return reply.send(responseSukses(hasil, hasil.pesan));
+    } catch (err) {
+      return reply.code(400).send({ berhasil: false, pesan: err.message });
+    }
+  },
+
+  async gantiPassword(request, reply) {
+    const { new_password } = request.body || {};
+    if (!new_password) {
+      return reply.code(400).send({ berhasil: false, pesan: 'Password baru wajib diisi' });
+    }
+
+    try {
+      const hasil = await authService.gantiPassword(request.pengguna.email, new_password);
       return reply.send(responseSukses(hasil, hasil.pesan));
     } catch (err) {
       return reply.code(400).send({ berhasil: false, pesan: err.message });

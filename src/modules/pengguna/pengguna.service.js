@@ -149,6 +149,10 @@ export const penggunaService = {
           }
         } catch {}
       }
+
+      if (!updatedAuth) {
+        throw new Error('Gagal mereset password kasir — akun auth tidak ditemukan');
+      }
     }
 
     return data || { id };

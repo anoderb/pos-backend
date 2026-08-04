@@ -24,5 +24,6 @@ export async function authRoutes(fastify, options) {
     protectedRoutes.addHook('preHandler', authenticate);
     protectedRoutes.get('/profil', authController.profil);
     protectedRoutes.post('/logout', authController.logout);
+    protectedRoutes.post('/ganti-password', authController.gantiPassword);
   });
 }

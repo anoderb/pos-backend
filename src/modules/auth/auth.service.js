@@ -275,6 +275,30 @@ export const authService = {
     return { pesan: 'Link reset password telah dikirim ke email Anda. Silakan cek kotak masuk email Anda.' };
   },
 
+  // 5b. Ganti Password Langsung (Self-Service, user sudah login JWT)
+  async gantiPassword(email, new_password) {
+    if (!new_password || new_password.length < 8) {
+      throw new Error('Password baru minimal 8 karakter');
+    }
+
+    // Cari user auth ID dari email
+    const { data: authUsers } = await supabaseAdmin.auth.admin.listUsers();
+    const authUser = authUsers?.users?.find(u => u.email?.toLowerCase() === email.toLowerCase());
+    if (!authUser) {
+      throw new Error('Akun pengguna tidak ditemukan di sistem auth');
+    }
+
+    const { error } = await supabaseAdmin.auth.admin.updateUserById(authUser.id, {
+      password: new_password,
+    });
+
+    if (error) {
+      throw new Error('Gagal mengubah password: ' + error.message);
+    }
+
+    return { pesan: 'Password berhasil diperbarui! Silakan login ulang.' };
+  },
+
   // 6. Refresh Token
   async refreshToken(refresh_token) {
     const { data, error } = await supabaseAuth.auth.refreshSession({
