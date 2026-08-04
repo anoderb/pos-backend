@@ -33,7 +33,7 @@ export const transaksiService = {
       .from('transaksi')
       .insert({
         toko_id,
-        shift_id,
+        shift_id: shift_id || '00000000-0000-0000-0000-000000000000',
         kasir_id,
         pelanggan_id: pelanggan_id || null,
         nomor_transaksi,
@@ -133,10 +133,14 @@ export const transaksiService = {
           .maybeSingle();
 
         if (!existing) {
-          const savedTx = await this.buatTransaksi(toko_id, kasir_id, {
+          console.log('SYNC_OFFLINE payload shift_id:', txPayload.shift_id);
+          const fixedPayload = {
             ...txPayload,
+            shift_id: txPayload.shift_id || '00000000-0000-0000-0000-000000000000',
             is_offline: true,
-          });
+          };
+          console.log('SYNC_OFFLINE after fix shift_id:', fixedPayload.shift_id);
+          const savedTx = await this.buatTransaksi(toko_id, kasir_id, fixedPayload);
           hasil.push({ id: txPayload.id, status: 'synced', server_id: savedTx.id });
         } else {
           hasil.push({ id: txPayload.id, status: 'already_exists' });
