@@ -39,7 +39,7 @@ export const adminDatasetController = {
             .maybeSingle();
 
           const proxyUrl = coverSample?.storage_path
-            ? `http://localhost:5000/api/admin/dataset/image-proxy?path=${encodeURIComponent(coverSample.storage_path)}`
+            ? `${getPublicBaseUrl(request)}/api/admin/dataset/image-proxy?path=${encodeURIComponent(coverSample.storage_path)}`
             : coverSample?.foto_url || c.thumbnail_url || null;
 
           return {
@@ -129,7 +129,7 @@ export const adminDatasetController = {
 
       const formatted = (photos || []).map((p) => {
         const proxyUrl = p.storage_path
-          ? `http://localhost:5000/api/admin/dataset/image-proxy?path=${encodeURIComponent(p.storage_path)}`
+          ? `${getPublicBaseUrl(request)}/api/admin/dataset/image-proxy?path=${encodeURIComponent(p.storage_path)}`
           : p.foto_url;
         return {
           ...p,

@@ -8,6 +8,19 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const PUBLIC_MODELS_DIR = path.join(__dirname, '../../../../public/models');
 
+// Dynamic base URL helper (production: api.tokiva.biz.id, dev: localhost:5000)
+function getPublicBaseUrl(request) {
+  if (process.env.PUBLIC_BASE_URL) return process.env.PUBLIC_BASE_URL.replace(/\/$/, '');
+  const proto = request.protocol;
+  const host = request.hostname;
+  const port = request.port && ![80, 443].includes(Number(request.port)) ? ':' + request.port : '';
+  return `${proto}://${host}${port}`;
+}
+
+function modelUrl(request, versiClean, filename) {
+  return `${getPublicBaseUrl(request)}/public/models/${versiClean}/${filename}`;
+}
+
 // Helper to parse any class.json format (Array OR Object mapping { "0": "label", ... } OR { "label": 0, ... })
 function extractOrderedClassLabels(parsedJson) {
   if (!parsedJson) return [];
@@ -100,7 +113,7 @@ export const adminModelController = {
 
                   if (parsedLabels.length > 0) {
                     dynamicClasses = parsedLabels;
-                    classJsonUrl = `http://localhost:5000/public/models/${versiClean}/${classEntry.entryName}`;
+                    classJsonUrl = `${modelUrl(request, versiClean, classEntry.entryName)}`;
 
                     // Auto-sync new classes to DB class_produk
                     for (const label of parsedLabels) {
@@ -118,8 +131,8 @@ export const adminModelController = {
                 }
               }
 
-              modelJsonPath = `http://localhost:5000/public/models/${versiClean}/model.json`;
-              weightsPath = `http://localhost:5000/public/models/${versiClean}/group1-shard1of1.bin`;
+              modelJsonPath = `${modelUrl(request, versiClean, 'model.json')}`;
+              weightsPath = `${modelUrl(request, versiClean, 'group1-shard1of1.bin')}`;
             } catch (zipErr) {
               console.error('Error extracting ZIP model:', zipErr.message);
             }
@@ -135,11 +148,11 @@ export const adminModelController = {
             uploadedFiles.push(part.filename);
 
             if (part.filename === 'model.json') {
-              modelJsonPath = `http://localhost:5000/public/models/${versiClean}/model.json`;
+              modelJsonPath = `${modelUrl(request, versiClean, 'model.json')}`;
             } else if (part.filename.endsWith('.bin')) {
-              weightsPath = `http://localhost:5000/public/models/${versiClean}/${part.filename}`;
+              weightsPath = `${modelUrl(request, versiClean, part.filename)}`;
             } else if (part.filename.endsWith('class.json') || part.filename.endsWith('labels.json')) {
-              classJsonUrl = `http://localhost:5000/public/models/${versiClean}/${part.filename}`;
+              classJsonUrl = `${modelUrl(request, versiClean, part.filename)}`;
               try {
                 const parsedJson = JSON.parse(buffer.toString());
                 dynamicClasses = extractOrderedClassLabels(parsedJson);
@@ -155,8 +168,8 @@ export const adminModelController = {
       nama = fields.nama || nama;
       akurasi = fields.akurasi ? parseFloat(fields.akurasi) / 100 : akurasi;
 
-      const finalJsonUrl = modelJsonPath || `http://localhost:5000/public/models/${versi}/model.json`;
-      const finalWeightsUrl = weightsPath || `http://localhost:5000/public/models/${versi}/group1-shard1of1.bin`;
+      const finalJsonUrl = modelJsonPath || `${modelUrl(request, versi, 'model.json')}`;
+      const finalWeightsUrl = weightsPath || `${modelUrl(request, versi, 'group1-shard1of1.bin')}`;
       const totalClassCount = dynamicClasses.length > 0 ? dynamicClasses.length : 24;
 
       // Save to Supabase DB model_versi
@@ -207,8 +220,8 @@ export const adminModelController = {
       }
 
       const versiClean = versi.replace(/[^\w-]/g, '');
-      const defaultJson = `http://localhost:5000/public/models/${versiClean}/model.json`;
-      const defaultWeights = `http://localhost:5000/public/models/${versiClean}/group1-shard1of1.bin`;
+      const defaultJson = `${modelUrl(request, versiClean, 'model.json')}`;
+      const defaultWeights = `${modelUrl(request, versiClean, 'group1-shard1of1.bin')}`;
 
       const { data: newModel, error } = await supabaseAdmin
         .from('model_versi')

@@ -38,7 +38,7 @@ await fastify.register(cors, {
     }
     const allowed = process.env.CORS_ORIGIN 
       ? process.env.CORS_ORIGIN.split(',').map(s => s.trim())
-      : ['http://localhost:3000', 'http://localhost:5000', 'http://127.0.0.1:3000', 'http://127.0.0.1:5000'];
+      : ['http://localhost:3000', 'http://localhost:5000', 'http://127.0.0.1:3000', 'http://127.0.0.1:5000', 'https://tokiva.biz.id', 'https://www.tokiva.biz.id'];
     if (allowed.includes(origin)) {
       return cb(null, true);
     }

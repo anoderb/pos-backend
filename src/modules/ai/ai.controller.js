@@ -1,11 +1,25 @@
 import { aiService } from './ai.service.js';
 import { responseSukses } from '../../utils/response.js';
 
+function rewriteModelUrl(url, request) {
+  if (!url) return url;
+  if (!url.includes('localhost') && !url.includes('127.0.0.1')) return url;
+  const proto = request.protocol;
+  const host = request.hostname;
+  const port = request.port && ![80, 443].includes(Number(request.port)) ? ':' + request.port : '';
+  const baseUrl = `${proto}://${host}${port}`;
+  return url.replace(/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?/, baseUrl);
+}
+
 export const aiController = {
   async getActiveModel(request, reply) {
     const data = await aiService.getActiveModel();
     if (!data) {
       return reply.code(404).send({ berhasil: false, pesan: 'Tidak ada model AI yang aktif saat ini' });
+    }
+    if (data.model) {
+      data.model.model_json_url = rewriteModelUrl(data.model.model_json_url, request);
+      data.model.weights_url = rewriteModelUrl(data.model.weights_url, request);
     }
     return reply.send(responseSukses(data, 'Model AI aktif berhasil diambil'));
   },
