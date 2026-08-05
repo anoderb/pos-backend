@@ -347,7 +347,8 @@ export const adminDatasetController = {
   async triggerSync(request, reply) {
     try {
       const adminId = request.admin?.id;
-      const result = await syncService.executeBatchSync(adminId);
+      const { class_ids } = request.body || {};
+      const result = await syncService.executeBatchSync(adminId, class_ids);
       return reply.send(result);
     } catch (err) {
       return reply.code(500).send({ berhasil: false, pesan: 'Sync ke HuggingFace gagal: ' + err.message });
@@ -372,6 +373,87 @@ export const adminDatasetController = {
       return reply.send({ berhasil: true, pesan: 'Pengaturan auto-sync berhasil diperbarui', data: config });
     } catch (err) {
       return reply.code(500).send({ berhasil: false, pesan: 'Gagal mengupdate config sync: ' + err.message });
+    }
+  },
+
+  // PUT /api/admin/dataset/class/:id/toggle-aktif
+  async toggleClassAktif(request, reply) {
+    try {
+      const { id } = request.params;
+      const { data: cls } = await supabaseAdmin.from('class_produk').select('aktif, nama').eq('id', id).maybeSingle();
+      if (!cls) return reply.code(404).send({ berhasil: false, pesan: 'Class tidak ditemukan' });
+
+      const newStatus = !cls.aktif;
+      await supabaseAdmin.from('class_produk').update({ aktif: newStatus, updated_at: new Date().toISOString() }).eq('id', id);
+
+      await supabaseAdmin.from('admin_log').insert([{
+        admin_id: request.admin?.id,
+        aksi: newStatus ? 'AKTIFKAN_CLASS' : 'NONAKTIFKAN_CLASS',
+        referensi_id: id, referensi_tipe: 'class_produk',
+      }]).catch(() => {});
+
+      return reply.send({ berhasil: true, pesan: `Class "${cls.nama}" berhasil ${newStatus ? 'diaktifkan' : 'dinonaktifkan'}`, data: { aktif: newStatus } });
+    } catch (err) {
+      return reply.code(500).send({ berhasil: false, pesan: 'Gagal toggle status class: ' + err.message });
+    }
+  },
+
+  // PUT /api/admin/dataset/class/:id
+  async editClass(request, reply) {
+    try {
+      const { id } = request.params;
+      const { nama, barcode, deskripsi } = request.body || {};
+
+      const updateData = {};
+      if (nama) {
+        updateData.nama = nama;
+        updateData.slug = nama.toLowerCase().replace(/[^\w-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+      }
+      if (barcode !== undefined) updateData.barcode = barcode;
+      if (deskripsi !== undefined) updateData.deskripsi = deskripsi;
+      updateData.updated_at = new Date().toISOString();
+
+      const { data, error } = await supabaseAdmin.from('class_produk').update(updateData).eq('id', id).select().single();
+      if (error) return reply.code(500).send({ berhasil: false, pesan: 'Gagal edit class: ' + error.message });
+
+      // Sync barcode ke class_barcode_map
+      if (barcode !== undefined) {
+        await supabaseAdmin.from('class_barcode_map').update({ barcode }).eq('class_id', id).catch(() => {});
+      }
+
+      await supabaseAdmin.from('admin_log').insert([{
+        admin_id: request.admin?.id, aksi: 'EDIT_CLASS',
+        referensi_id: id, referensi_tipe: 'class_produk',
+      }]).catch(() => {});
+
+      return reply.send({ berhasil: true, pesan: 'Class berhasil diperbarui', data });
+    } catch (err) {
+      return reply.code(500).send({ berhasil: false, pesan: 'Gagal edit class: ' + err.message });
+    }
+  },
+
+  // DELETE /api/admin/dataset/class/:id
+  async deleteClass(request, reply) {
+    try {
+      const { id } = request.params;
+
+      // Cek apakah class punya foto dataset
+      const { count } = await supabaseAdmin.from('dataset_foto').select('id', { count: 'exact', head: true }).eq('class_id', id);
+      if (count > 0) {
+        return reply.code(400).send({ berhasil: false, pesan: `Tidak bisa hapus class dengan ${count} foto dataset. Hapus atau pindahkan foto terlebih dahulu.` });
+      }
+
+      const { error } = await supabaseAdmin.from('class_produk').delete().eq('id', id);
+      if (error) return reply.code(500).send({ berhasil: false, pesan: 'Gagal hapus class: ' + error.message });
+
+      await supabaseAdmin.from('admin_log').insert([{
+        admin_id: request.admin?.id, aksi: 'HAPUS_CLASS',
+        referensi_id: id, referensi_tipe: 'class_produk',
+      }]).catch(() => {});
+
+      return reply.send({ berhasil: true, pesan: 'Class berhasil dihapus' });
+    } catch (err) {
+      return reply.code(500).send({ berhasil: false, pesan: 'Gagal hapus class: ' + err.message });
     }
   },
 };

@@ -104,7 +104,7 @@ export const syncService = {
   },
 
   // Execute single batch commit sync to HuggingFace
-  async executeBatchSync(adminId = null) {
+  async executeBatchSync(adminId = null, classIds = null) {
     // Log start of sync
     const { data: logEntry } = await supabaseAdmin
       .from('sync_log')
@@ -119,12 +119,25 @@ export const syncService = {
 
     try {
       // 1. Fetch all pending approved photos with class details
-      const { data: photos, error: errFetch } = await supabaseAdmin
+      let { data: photos, error: errFetch } = await supabaseAdmin
         .from('dataset_foto')
         .select('*, class_produk(id, nama, slug, thumbnail_url)')
         .eq('lokasi', 'supabase')
         .eq('status', 'disetujui')
+        .in('class_id', classIds && Array.isArray(classIds) && classIds.length > 0 ? classIds : ['________all________'])
         .limit(1000); // Safety limit per batch
+
+      // If no classIds filter, re-fetch without filter
+      if (!classIds || !Array.isArray(classIds) || classIds.length === 0) {
+        const { data: allPhotos, error: err2 } = await supabaseAdmin
+          .from('dataset_foto')
+          .select('*, class_produk(id, nama, slug, thumbnail_url)')
+          .eq('lokasi', 'supabase')
+          .eq('status', 'disetujui')
+          .limit(1000);
+        if (err2) throw err2;
+        photos = allPhotos;
+      }
 
       if (errFetch) throw errFetch;
 

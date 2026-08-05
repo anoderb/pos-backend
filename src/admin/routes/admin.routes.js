@@ -47,6 +47,9 @@ export async function adminRoutes(fastify, options) {
     protectedAdmin.post('/dataset/sync-huggingface', adminTag('Trigger Manual Batch Sync ke HuggingFace'), adminDatasetController.triggerSync);
     protectedAdmin.get('/dataset/sync-status', adminTag('Get HuggingFace Sync Status & Stats'), adminDatasetController.getSyncStatus);
     protectedAdmin.put('/dataset/sync-config', adminTag('Update HuggingFace Auto-Sync Config'), adminDatasetController.updateSyncConfig);
+    protectedAdmin.put('/dataset/class/:id/toggle-aktif', adminTag('Toggle Aktif/Nonaktif Class'), adminDatasetController.toggleClassAktif);
+    protectedAdmin.put('/dataset/class/:id', adminTag('Edit Class Produk AI'), adminDatasetController.editClass);
+    protectedAdmin.delete('/dataset/class/:id', adminTag('Hapus Class Produk AI'), adminDatasetController.deleteClass);
 
     // Kurasi Koreksi Kasir & Unknown Products
     protectedAdmin.get('/kurasi', adminTag('Antrean Kurasi Koreksi Kasir'), adminKurasiController.listPendingKurasi);
