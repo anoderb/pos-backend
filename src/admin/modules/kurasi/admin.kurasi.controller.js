@@ -18,10 +18,35 @@ export const adminKurasiController = {
 
       if (error) throw error;
 
+      // Generate signed URLs for private bucket photos
+      const koreksiWithSignedUrls = await Promise.all(
+        (koreksi || []).map(async (item) => {
+          if (item.foto_url && item.foto_url.includes('supabase.co/storage/v1/object/public/')) {
+            try {
+              // Extract file path from public URL
+              const urlParts = item.foto_url.split('/object/public/');
+              if (urlParts.length === 2) {
+                const [bucket, ...pathParts] = urlParts[1].split('/');
+                const filePath = pathParts.join('/');
+                const { data: signedData } = await supabaseAdmin.storage
+                  .from(bucket)
+                  .createSignedUrl(filePath, 3600); // 1 hour expiry
+                if (signedData?.signedUrl) {
+                  item.foto_url = signedData.signedUrl;
+                }
+              }
+            } catch (e) {
+              // Keep original URL if signed URL fails
+            }
+          }
+          return item;
+        })
+      );
+
       return reply.send({
         berhasil: true,
         pesan: 'Antrean Kurasi Koreksi Kasir',
-        data: koreksi || [],
+        data: koreksiWithSignedUrls,
       });
     } catch (err) {
       return reply.code(500).send({
