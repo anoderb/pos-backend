@@ -56,9 +56,30 @@ export const adminKurasiController = {
 
       const targetClassId = item.produk_dipilih?.class_produk_id || null;
 
-      // 3. Add to dataset_foto table with class_id linked
+      // 3a. Fallback: cari class_id via class_barcode_map berdasarkan barcode produk
+      let finalClassId = targetClassId;
+      if (!finalClassId) {
+        const { data: produkBarang } = await supabaseAdmin
+          .from('produk')
+          .select('barcode')
+          .eq('id', item.produk_dipilih_id)
+          .maybeSingle();
+        if (produkBarang?.barcode) {
+          const { data: mapping } = await supabaseAdmin
+            .from('class_barcode_map')
+            .select('class_id')
+            .eq('barcode', produkBarang.barcode)
+            .maybeSingle();
+          if (mapping) {
+            finalClassId = mapping.class_id;
+            console.log('✅ Fallback class_id found via barcode:', produkBarang.barcode);
+          }
+        }
+      }
+
+      // 4. Add to dataset_foto table with class_id linked
       await supabaseAdmin.from('dataset_foto').insert([{
-        class_id: targetClassId,
+        class_id: finalClassId,
         foto_url: item.foto_url,
         sumber: 'koreksi_kasir',
         referensi_id: item.id,

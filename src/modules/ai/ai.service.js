@@ -39,6 +39,7 @@ export const aiService = {
       prediksi_3_produk_id,
       prediksi_3_confidence,
       produk_dipilih_id,
+      is_correct = false,
     } = payload;
 
     let finalFotoUrl = foto_url || '';
@@ -73,9 +74,7 @@ export const aiService = {
       finalFotoUrl = foto_base64.startsWith('data:image') ? foto_base64 : `data:image/jpeg;base64,${foto_base64}`;
     }
 
-    const { data, error } = await supabaseAdmin
-      .from('koreksi_ai')
-      .insert({
+    const insertData = {
         toko_id,
         kasir_id,
         foto_url: finalFotoUrl,
@@ -87,12 +86,39 @@ export const aiService = {
         prediksi_3_confidence,
         produk_dipilih_id,
         status: 'menunggu',
-      })
-      .select()
-      .single();
-
-    if (error) throw new Error('Gagal menyimpan koreksi AI: ' + error.message);
-    return data;
+    };
+    // Only include is_correct if column exists (graceful migration)
+    try {
+      const { data, error } = await supabaseAdmin
+        .from('koreksi_ai')
+        .insert({ ...insertData, is_correct })
+        .select()
+        .single();
+      if (error && error.message.includes('is_correct')) {
+        // Column doesn't exist yet — fallback without is_correct
+        const { data: data2, error: err2 } = await supabaseAdmin
+          .from('koreksi_ai')
+          .insert(insertData)
+          .select()
+          .single();
+        if (err2) throw new Error('Gagal menyimpan koreksi AI: ' + err2.message);
+        return data2;
+      }
+      if (error) throw new Error('Gagal menyimpan koreksi AI: ' + error.message);
+      return data;
+    } catch (err) {
+      if (err.message.includes('is_correct')) {
+        // Retry without is_correct
+        const { data, error: err2 } = await supabaseAdmin
+          .from('koreksi_ai')
+          .insert(insertData)
+          .select()
+          .single();
+        if (err2) throw new Error('Gagal menyimpan koreksi AI: ' + err2.message);
+        return data;
+      }
+      throw err;
+    }
   },
 
   // 2. List Koreksi Menunggu Review
