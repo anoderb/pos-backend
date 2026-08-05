@@ -1,0 +1,18 @@
+
+2026-08-05 14:33:02.787264: E external/local_xla/xla/stream_executor/cuda/cuda_fft.cc:467] Unable to register cuFFT factory: Attempting to register factory for plugin cuFFT when one has already been registered
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+E0000 00:00:1785940382.812624    7777 cuda_dnn.cc:8579] Unable to register cuDNN factory: Attempting to register factory for plugin cuDNN when one has already been registered
+E0000 00:00:1785940382.821170    7777 cuda_blas.cc:1407] Unable to register cuBLAS factory: Attempting to register factory for plugin cuBLAS when one has already been registered
+W0000 00:00:1785940382.841572    7777 computation_placer.cc:177] computation placer already registered. Please check linkage and avoid linking the same target more than once.
+W0000 00:00:1785940382.841610    7777 computation_placer.cc:177] computation placer already registered. Please check linkage and avoid linking the same target more than once.
+W0000 00:00:1785940382.841613    7777 computation_placer.cc:177] computation placer already registered. Please check linkage and avoid linking the same target more than once.
+W0000 00:00:1785940382.841616    7777 computation_placer.cc:177] computation placer already registered. Please check linkage and avoid linking the same target more than once.
+🌲 Try https://ydf.readthedocs.io, the successor of TensorFlow Decision Forests with more features and faster training!
+/usr/local/lib/python3.12/dist-packages/tensorflow_hub/__init__.py:61: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
+  from pkg_resources import parse_version
+<frozen runpy>:128: RuntimeWarning: 'tensorflowjs.converters.converter' found in sys.modules after import of package 'tensorflowjs.converters', but prior to execution of 'tensorflowjs.converters.converter'; this may result in unpredictable behaviour
+I0000 00:00:1785940389.206448    7777 gpu_device.cc:2019] Created device /job:localhost/replica:0/task:0/device:GPU:0 with 11141 MB memory:  -> device: 0, name: Tesla P100-PCIE-16GB, pci bus id: 0000:00:04.0, compute capability: 6.0
+I0000 00:00:1785940390.466504    7777 devices.cc:67] Number of eligible GPUs (core count >= 8, compute capability >= 0.0): 1
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+I0000 00:00:1785940390.466782    7777 single_machine.cc:374] Starting new session
+I0000 00:00:1785940390.467908    7777 gpu_device.cc:2019] Created device /job:localhost/replica:0/task:0/device:GPU:0 with 11141 MB memory:  -> device: 0, name: Tesla P100-PCIE-16GB, pci bus id: 0000:00:04.0, compute capability: 6.0

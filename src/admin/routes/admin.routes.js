@@ -4,6 +4,7 @@ import { adminUsersController } from '../modules/users/admin.users.controller.js
 import { adminDatasetController } from '../modules/dataset/admin.dataset.controller.js';
 import { adminKurasiController } from '../modules/kurasi/admin.kurasi.controller.js';
 import { adminModelController } from '../modules/model/admin.model.controller.js';
+import { adminTrainingController } from '../modules/training/admin.training.controller.js';
 import { adminLogController } from '../modules/log/admin.log.controller.js';
 import { authenticateAdmin } from '../middleware/admin.auth.js';
 
@@ -63,6 +64,12 @@ export async function adminRoutes(fastify, options) {
     protectedAdmin.put('/model/:id/aktifkan', adminTag('Set Active Live Deployment Model AI'), adminModelController.aktifkanModel);
     protectedAdmin.put('/model/:id/threshold', adminTag('Update Confidence Threshold Model'), adminModelController.updateThreshold);
     protectedAdmin.delete('/model/:id', adminTag('Hapus Versi Model AI'), adminModelController.deleteModel);
+
+    // Training Pipeline (Kaggle)
+    protectedAdmin.post('/model/train', adminTag('Trigger Kaggle Training Notebook'), adminTrainingController.triggerTraining);
+    protectedAdmin.get('/model/train/status', adminTag('Poll Kaggle Training Status + Auto-Register'), adminTrainingController.getStatus);
+    protectedAdmin.get('/model/train/history', adminTag('Training History Log'), adminTrainingController.getHistory);
+    protectedAdmin.get('/model/:id/training-summary', adminTag('Get Training Summary untuk Model'), adminTrainingController.getTrainingSummary);
 
     // Audit Logs
     protectedAdmin.get('/log/aktivitas', adminTag('Audit Trail Log Aktivitas Admin'), adminLogController.listAktivitas);

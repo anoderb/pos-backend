@@ -263,18 +263,25 @@ export const adminModelController = {
     try {
       const { id } = request.params;
       const adminId = request.admin?.id;
+      // Optional override: { versi_override: 'v2' } — hybrid versioning
+      const { versi_override } = request.body || {};
 
       // 1. Set all other models to nonaktif
       await supabaseAdmin.from('model_versi').update({ status: 'nonaktif' }).neq('id', id);
 
-      // 2. Activate target model
+      // 2. Activate target model (+ optional versi override)
+      const updatePayload = {
+        status: 'aktif',
+        activated_by: adminId,
+        activated_at: new Date(),
+      };
+      if (versi_override && /^v[\d.]+$/.test(String(versi_override))) {
+        updatePayload.versi = String(versi_override);
+      }
+
       const { data: activeModel, error } = await supabaseAdmin
         .from('model_versi')
-        .update({
-          status: 'aktif',
-          activated_by: adminId,
-          activated_at: new Date(),
-        })
+        .update(updatePayload)
         .eq('id', id)
         .select()
         .single();

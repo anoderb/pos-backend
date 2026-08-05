@@ -2,6 +2,15 @@ import { supabaseAdmin } from '../../../config/database.js';
 import { hfConfig } from '../../config/hf.config.js';
 import { syncService } from './sync.service.js';
 
+// Dynamic base URL helper (production: api.tokiva.biz.id, dev: localhost:5000)
+function getPublicBaseUrl(request) {
+  if (process.env.PUBLIC_BASE_URL) return process.env.PUBLIC_BASE_URL.replace(/\/$/, '');
+  const proto = request.protocol;
+  const host = request.hostname;
+  const port = request.port && ![80, 443].includes(Number(request.port)) ? ':' + request.port : '';
+  return `${proto}://${host}${port}`;
+}
+
 export const adminDatasetController = {
   // GET /api/admin/dataset/class (List all AI classes with EXACT SQL COUNT & COVER IMAGE)
   async listClass(request, reply) {
