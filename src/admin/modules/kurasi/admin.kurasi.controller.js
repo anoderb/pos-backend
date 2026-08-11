@@ -1,0 +1,178 @@
+import { supabaseAdmin } from '../../../config/database.js';
+
+export const adminKurasiController = {
+  // GET /api/admin/kurasi (List pending cashier corrections & user photos)
+  async listPendingKurasi(request, reply) {
+    try {
+      const { data: koreksi, error } = await supabaseAdmin
+        .from('koreksi_ai')
+        .select(`
+          *,
+          toko(nama),
+          pengguna!koreksi_ai_kasir_id_fkey(nama),
+          produk_dipilih:produk!koreksi_ai_produk_dipilih_id_fkey(nama, barcode),
+          prediksi_1:produk!koreksi_ai_prediksi_1_produk_id_fkey(nama)
+        `)
+        .eq('status', 'menunggu')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      // Generate signed URLs for private bucket photos
+      const koreksiWithSignedUrls = await Promise.all(
+        (koreksi || []).map(async (item) => {
+          if (item.foto_url && item.foto_url.includes('supabase.co/storage/v1/object/public/')) {
+            try {
+              // Extract file path from public URL
+              const urlParts = item.foto_url.split('/object/public/');
+              if (urlParts.length === 2) {
+                const [bucket, ...pathParts] = urlParts[1].split('/');
+                const filePath = pathParts.join('/');
+                const { data: signedData } = await supabaseAdmin.storage
+                  .from(bucket)
+                  .createSignedUrl(filePath, 3600); // 1 hour expiry
+                if (signedData?.signedUrl) {
+                  item.foto_url = signedData.signedUrl;
+                }
+              }
+            } catch (e) {
+              // Keep original URL if signed URL fails
+            }
+          }
+          return item;
+        })
+      );
+
+      return reply.send({
+        berhasil: true,
+        pesan: 'Antrean Kurasi Koreksi Kasir',
+        data: koreksiWithSignedUrls,
+      });
+    } catch (err) {
+      return reply.code(500).send({
+        berhasil: false,
+        pesan: 'Gagal mengambil data kurasi: ' + err.message,
+      });
+    }
+  },
+
+  // PUT /api/admin/kurasi/:id/setujui
+  async setujuiKoreksi(request, reply) {
+    try {
+      const { id } = request.params;
+      const adminId = request.admin?.id;
+
+      // 1. Get koreksi detail with target product class
+      const { data: item } = await supabaseAdmin
+        .from('koreksi_ai')
+        .select('*, produk_dipilih:produk_dipilih_id(id, class_produk_id)')
+        .eq('id', id)
+        .single();
+
+      if (!item) {
+        return reply.code(404).send({ berhasil: false, pesan: 'Data koreksi tidak ditemukan' });
+      }
+
+      // 2. Update status in koreksi_ai
+      await supabaseAdmin
+        .from('koreksi_ai')
+        .update({ status: 'disetujui', reviewed_by: adminId, reviewed_at: new Date() })
+        .eq('id', id);
+
+      const targetClassId = item.produk_dipilih?.class_produk_id || null;
+
+      // 3a. Fallback: cari class_id via class_barcode_map berdasarkan barcode produk
+      let finalClassId = targetClassId;
+      if (!finalClassId) {
+        const { data: produkBarang } = await supabaseAdmin
+          .from('produk')
+          .select('barcode')
+          .eq('id', item.produk_dipilih_id)
+          .maybeSingle();
+        if (produkBarang?.barcode) {
+          const { data: mapping } = await supabaseAdmin
+            .from('class_barcode_map')
+            .select('class_id')
+            .eq('barcode', produkBarang.barcode)
+            .maybeSingle();
+          if (mapping) {
+            finalClassId = mapping.class_id;
+            console.log('✅ Fallback class_id found via barcode:', produkBarang.barcode);
+          }
+        }
+      }
+
+      // 4. Add to dataset_foto table with class_id linked
+      await supabaseAdmin.from('dataset_foto').insert([{
+        class_id: finalClassId,
+        foto_url: item.foto_url,
+        sumber: 'koreksi_kasir',
+        referensi_id: item.id,
+        toko_id: item.toko_id,
+        status: 'disetujui',
+        lokasi: 'supabase',
+        reviewed_by: adminId,
+        reviewed_at: new Date(),
+      }]);
+
+      return reply.send({
+        berhasil: true,
+        pesan: 'Koreksi kasir berhasil disetujui & dimasukkan ke dataset latihan AI',
+      });
+    } catch (err) {
+      return reply.code(500).send({
+        berhasil: false,
+        pesan: 'Gagal menyetujui koreksi: ' + err.message,
+      });
+    }
+  },
+
+  // PUT /api/admin/kurasi/:id/tolak
+  async tolakKoreksi(request, reply) {
+    try {
+      const { id } = request.params;
+      const { catatan } = request.body || {};
+      const adminId = request.admin?.id;
+
+      // Get foto_url before updating
+      const { data: item } = await supabaseAdmin
+        .from('koreksi_ai')
+        .select('foto_url')
+        .eq('id', id)
+        .single();
+
+      await supabaseAdmin
+        .from('koreksi_ai')
+        .update({
+          status: 'ditolak',
+          reviewed_by: adminId,
+          reviewed_at: new Date(),
+        })
+        .eq('id', id);
+
+      // Delete photo from Supabase Storage
+      if (item?.foto_url) {
+        try {
+          const url = new URL(item.foto_url);
+          const pathParts = url.pathname.split('/public/');
+          if (pathParts.length === 2) {
+            const [bucket, ...filePath] = pathParts[1].split('/');
+            await supabaseAdmin.storage.from(bucket).remove([filePath.join('/')]);
+          }
+        } catch (e) {
+          console.error('Gagal hapus foto dari storage:', e.message);
+        }
+      }
+
+      return reply.send({
+        berhasil: true,
+        pesan: 'Koreksi kasir berhasil ditolak & foto dihapus',
+      });
+    } catch (err) {
+      return reply.code(500).send({
+        berhasil: false,
+        pesan: 'Gagal menolak koreksi: ' + err.message,
+      });
+    }
+  },
+};

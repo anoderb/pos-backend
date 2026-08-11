@@ -1,0 +1,29 @@
+# Node modules
+node_modules/
+
+# Local Environment Variables (CRITICAL SECURITY: DO NOT COMMIT)
+.env
+.env.local
+.env.production
+*.env
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+
+# Credentials & secrets
+.hermes/
+*.json
+!package.json
+!package-lock.json
+!kaggle/kernel-push/kernel-metadata.json
+!public/models/v1/model.json
+!public/models/v1/class.json
+!public/models/v1/training_summary.json
+
+# Hermes desktop attachments
+.hermes/

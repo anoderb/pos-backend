@@ -1,0 +1,692 @@
+{
+    "best_experiment": "E1_MobileNetV3",
+    "selection_rule": [
+        "accuracy desc",
+        "f1_macro desc",
+        "inference_time_per_image_ms asc"
+    ],
+    "accuracy": 0.9944444444444445,
+    "f1_macro": 0.9944185485751151,
+    "precision_macro": 0.9946236559139785,
+    "recall_macro": 0.9944444444444445,
+    "auc_macro_ovr": 0.9999275362318839,
+    "inference_ms": 6.708920109722133,
+    "fps": 149.05528514952277,
+    "parameters": 3019418,
+    "best_epoch": 50,
+    "best_val_accuracy": 0.9944444298744202,
+    "training_time_s": 932.73751756,
+    "num_classes": 24,
+    "num_test_images": 720,
+    "num_misclassified": 4,
+    "training_history": [
+        {
+            "accuracy": 0.1223214268684387,
+            "loss": 3.162760734558105,
+            "top5_accuracy": 0.4029761850833893,
+            "val_accuracy": 0.3958333432674408,
+            "val_loss": 2.4469830989837646,
+            "val_top5_accuracy": 0.7861111164093018,
+            "learning_rate": 9.999999747378752e-05
+        },
+        {
+            "accuracy": 0.4425595104694366,
+            "loss": 2.1411731243133545,
+            "top5_accuracy": 0.8059523701667786,
+            "val_accuracy": 0.8138889074325562,
+            "val_loss": 1.3193202018737793,
+            "val_top5_accuracy": 0.9861111044883728,
+            "learning_rate": 9.999999747378752e-05
+        },
+        {
+            "accuracy": 0.7044642567634583,
+            "loss": 1.468086838722229,
+            "top5_accuracy": 0.9571428298950196,
+            "val_accuracy": 0.9277777671813964,
+            "val_loss": 1.0138227939605713,
+            "val_top5_accuracy": 0.9944444298744202,
+            "learning_rate": 9.999999747378752e-05
+        },
+        {
+            "accuracy": 0.8321428298950195,
+            "loss": 1.1966413259506226,
+            "top5_accuracy": 0.9827380776405334,
+            "val_accuracy": 0.9458333253860474,
+            "val_loss": 0.9260793924331664,
+            "val_top5_accuracy": 0.9972222447395324,
+            "learning_rate": 9.999999747378752e-05
+        },
+        {
+            "accuracy": 0.8785714507102966,
+            "loss": 1.0665695667266846,
+            "top5_accuracy": 0.993749976158142,
+            "val_accuracy": 0.9638888835906982,
+            "val_loss": 0.8765601515769958,
+            "val_top5_accuracy": 1.0,
+            "learning_rate": 9.999999747378752e-05
+        },
+        {
+            "accuracy": 0.9157738089561462,
+            "loss": 0.9952004551887512,
+            "top5_accuracy": 0.9967262148857116,
+            "val_accuracy": 0.968055546283722,
+            "val_loss": 0.8478978276252747,
+            "val_top5_accuracy": 1.0,
+            "learning_rate": 9.999999747378752e-05
+        },
+        {
+            "accuracy": 0.9342262148857116,
+            "loss": 0.9357072114944458,
+            "top5_accuracy": 0.998214304447174,
+            "val_accuracy": 0.9763888716697692,
+            "val_loss": 0.8239354491233826,
+            "val_top5_accuracy": 1.0,
+            "learning_rate": 9.999999747378752e-05
+        },
+        {
+            "accuracy": 0.9461309313774108,
+            "loss": 0.9042999744415284,
+            "top5_accuracy": 0.9988095164299012,
+            "val_accuracy": 0.9777777791023254,
+            "val_loss": 0.8065490126609802,
+            "val_top5_accuracy": 1.0,
+            "learning_rate": 9.999999747378752e-05
+        },
+        {
+            "accuracy": 0.9595237970352172,
+            "loss": 0.8716806769371033,
+            "top5_accuracy": 0.999404788017273,
+            "val_accuracy": 0.9847221970558168,
+            "val_loss": 0.7928475141525269,
+            "val_top5_accuracy": 1.0,
+            "learning_rate": 9.999999747378752e-05
+        },
+        {
+            "accuracy": 0.9699404835700988,
+            "loss": 0.8482620120048523,
+            "top5_accuracy": 0.9997023940086364,
+            "val_accuracy": 0.9861111044883728,
+            "val_loss": 0.7796568274497986,
+            "val_top5_accuracy": 1.0,
+            "learning_rate": 9.999999747378752e-05
+        },
+        {
+            "accuracy": 0.9732142686843872,
+            "loss": 0.8342494964599609,
+            "top5_accuracy": 0.9997023940086364,
+            "val_accuracy": 0.9861111044883728,
+            "val_loss": 0.771578311920166,
+            "val_top5_accuracy": 1.0,
+            "learning_rate": 9.999999747378752e-05
+        },
+        {
+            "accuracy": 0.976190447807312,
+            "loss": 0.8168942332267761,
+            "top5_accuracy": 0.999404788017273,
+            "val_accuracy": 0.987500011920929,
+            "val_loss": 0.7622596621513367,
+            "val_top5_accuracy": 1.0,
+            "learning_rate": 9.999999747378752e-05
+        },
+        {
+            "accuracy": 0.9794642925262452,
+            "loss": 0.8061897158622742,
+            "top5_accuracy": 0.9997023940086364,
+            "val_accuracy": 0.987500011920929,
+            "val_loss": 0.7589048743247986,
+            "val_top5_accuracy": 1.0,
+            "learning_rate": 9.999999747378752e-05
+        },
+        {
+            "accuracy": 0.9785714149475098,
+            "loss": 0.7940923571586609,
+            "top5_accuracy": 0.9997023940086364,
+            "val_accuracy": 0.9888888597488404,
+            "val_loss": 0.7521405816078186,
+            "val_top5_accuracy": 1.0,
+            "learning_rate": 9.999999747378752e-05
+        },
+        {
+            "accuracy": 0.9869047403335572,
+            "loss": 0.7788788676261902,
+            "top5_accuracy": 0.9997023940086364,
+            "val_accuracy": 0.9888888597488404,
+            "val_loss": 0.750620424747467,
+            "val_top5_accuracy": 1.0,
+            "learning_rate": 9.999999747378752e-05
+        },
+        {
+            "accuracy": 0.9883928298950196,
+            "loss": 0.7755845785140991,
+            "top5_accuracy": 1.0,
+            "val_accuracy": 0.9930555820465088,
+            "val_loss": 0.736784815788269,
+            "val_top5_accuracy": 1.0,
+            "learning_rate": 9.999999747378752e-05
+        },
+        {
+            "accuracy": 0.9883928298950196,
+            "loss": 0.7692130208015442,
+            "top5_accuracy": 1.0,
+            "val_accuracy": 0.9902777671813964,
+            "val_loss": 0.7374066114425659,
+            "val_top5_accuracy": 1.0,
+            "learning_rate": 9.999999747378752e-05
+        },
+        {
+            "accuracy": 0.993154764175415,
+            "loss": 0.7564454078674316,
+            "top5_accuracy": 1.0,
+            "val_accuracy": 0.9888888597488404,
+            "val_loss": 0.7308249473571777,
+            "val_top5_accuracy": 1.0,
+            "learning_rate": 9.999999747378752e-05
+        },
+        {
+            "accuracy": 0.9919642806053162,
+            "loss": 0.7550615668296814,
+            "top5_accuracy": 0.9997023940086364,
+            "val_accuracy": 0.9902777671813964,
+            "val_loss": 0.729897141456604,
+            "val_top5_accuracy": 1.0,
+            "learning_rate": 9.999999747378752e-05
+        },
+        {
+            "accuracy": 0.9955357313156128,
+            "loss": 0.743254542350769,
+            "top5_accuracy": 1.0,
+            "val_accuracy": 0.9902777671813964,
+            "val_loss": 0.726629912853241,
+            "val_top5_accuracy": 1.0,
+            "learning_rate": 9.999999747378752e-05
+        },
+        {
+            "accuracy": 0.992559552192688,
+            "loss": 0.738873302936554,
+            "top5_accuracy": 1.0,
+            "val_accuracy": 0.9888888597488404,
+            "val_loss": 0.7242701053619385,
+            "val_top5_accuracy": 1.0,
+            "learning_rate": 9.999999747378752e-05
+        },
+        {
+            "accuracy": 0.9970238208770752,
+            "loss": 0.7313941717147827,
+            "top5_accuracy": 1.0,
+            "val_accuracy": 0.9930555820465088,
+            "val_loss": 0.7187337279319763,
+            "val_top5_accuracy": 1.0,
+            "learning_rate": 9.999999747378752e-05
+        },
+        {
+            "accuracy": 0.9946428537368774,
+            "loss": 0.7311131358146667,
+            "top5_accuracy": 1.0,
+            "val_accuracy": 0.9916666746139526,
+            "val_loss": 0.7191439270973206,
+            "val_top5_accuracy": 1.0,
+            "learning_rate": 9.999999747378752e-05
+        },
+        {
+            "accuracy": 0.9988095164299012,
+            "loss": 0.726165235042572,
+            "top5_accuracy": 1.0,
+            "val_accuracy": 0.9916666746139526,
+            "val_loss": 0.7185100317001343,
+            "val_top5_accuracy": 1.0,
+            "learning_rate": 9.999999747378752e-05
+        },
+        {
+            "accuracy": 0.9979166388511658,
+            "loss": 0.723288893699646,
+            "top5_accuracy": 1.0,
+            "val_accuracy": 0.9930555820465088,
+            "val_loss": 0.7180455327033997,
+            "val_top5_accuracy": 1.0,
+            "learning_rate": 9.999999747378752e-05
+        },
+        {
+            "accuracy": 0.998214304447174,
+            "loss": 0.7200464606285095,
+            "top5_accuracy": 1.0,
+            "val_accuracy": 0.9902777671813964,
+            "val_loss": 0.7161377668380737,
+            "val_top5_accuracy": 1.0,
+            "learning_rate": 9.999999747378752e-05
+        },
+        {
+            "accuracy": 0.9979166388511658,
+            "loss": 0.7178769111633301,
+            "top5_accuracy": 1.0,
+            "val_accuracy": 0.9888888597488404,
+            "val_loss": 0.7156408429145813,
+            "val_top5_accuracy": 1.0,
+            "learning_rate": 9.999999747378752e-05
+        },
+        {
+            "accuracy": 0.998214304447174,
+            "loss": 0.7121473550796509,
+            "top5_accuracy": 1.0,
+            "val_accuracy": 0.9944444298744202,
+            "val_loss": 0.713106632232666,
+            "val_top5_accuracy": 1.0,
+            "learning_rate": 9.999999747378752e-05
+        },
+        {
+            "accuracy": 0.998214304447174,
+            "loss": 0.7112520933151245,
+            "top5_accuracy": 1.0,
+            "val_accuracy": 0.9916666746139526,
+            "val_loss": 0.7102965712547302,
+            "val_top5_accuracy": 1.0,
+            "learning_rate": 9.999999747378752e-05
+        },
+        {
+            "accuracy": 0.9985119104385376,
+            "loss": 0.7081759572029114,
+            "top5_accuracy": 1.0,
+            "val_accuracy": 0.9944444298744202,
+            "val_loss": 0.7110434770584106,
+            "val_top5_accuracy": 1.0,
+            "learning_rate": 9.999999747378752e-05
+        },
+        {
+            "accuracy": 0.9991071224212646,
+            "loss": 0.7048335671424866,
+            "top5_accuracy": 1.0,
+            "val_accuracy": 0.9972222447395324,
+            "val_loss": 0.7068610787391663,
+            "val_top5_accuracy": 1.0,
+            "learning_rate": 9.999999747378752e-05
+        },
+        {
+            "accuracy": 0.9979166388511658,
+            "loss": 0.7027089595794678,
+            "top5_accuracy": 1.0,
+            "val_accuracy": 0.9930555820465088,
+            "val_loss": 0.7055448293685913,
+            "val_top5_accuracy": 1.0,
+            "learning_rate": 9.999999747378752e-05
+        },
+        {
+            "accuracy": 0.9997023940086364,
+            "loss": 0.6997699737548828,
+            "top5_accuracy": 1.0,
+            "val_accuracy": 0.9958333373069764,
+            "val_loss": 0.7079750299453735,
+            "val_top5_accuracy": 1.0,
+            "learning_rate": 9.999999747378752e-05
+        },
+        {
+            "accuracy": 0.9991071224212646,
+            "loss": 0.7001889944076538,
+            "top5_accuracy": 1.0,
+            "val_accuracy": 0.9958333373069764,
+            "val_loss": 0.7057314515113831,
+            "val_top5_accuracy": 1.0,
+            "learning_rate": 9.999999747378752e-05
+        },
+        {
+            "accuracy": 0.999404788017273,
+            "loss": 0.6971873044967651,
+            "top5_accuracy": 1.0,
+            "val_accuracy": 0.9930555820465088,
+            "val_loss": 0.707798957824707,
+            "val_top5_accuracy": 1.0,
+            "learning_rate": 9.999999747378752e-05
+        },
+        {
+            "accuracy": 0.9991071224212646,
+            "loss": 0.6954777836799622,
+            "top5_accuracy": 1.0,
+            "val_accuracy": 0.9944444298744202,
+            "val_loss": 0.7016631364822388,
+            "val_top5_accuracy": 1.0,
+            "learning_rate": 1.9999999494757503e-05
+        },
+        {
+            "accuracy": 0.9997023940086364,
+            "loss": 0.6922847032546997,
+            "top5_accuracy": 1.0,
+            "val_accuracy": 0.9930555820465088,
+            "val_loss": 0.7022711634635925,
+            "val_top5_accuracy": 1.0,
+            "learning_rate": 1.9999999494757503e-05
+        },
+        {
+            "accuracy": 0.9985119104385376,
+            "loss": 0.6949204206466675,
+            "top5_accuracy": 1.0,
+            "val_accuracy": 0.9930555820465088,
+            "val_loss": 0.7011086344718933,
+            "val_top5_accuracy": 1.0,
+            "learning_rate": 1.9999999494757503e-05
+        },
+        {
+            "accuracy": 0.9988095164299012,
+            "loss": 0.6909374594688416,
+            "top5_accuracy": 1.0,
+            "val_accuracy": 0.9930555820465088,
+            "val_loss": 0.7006756663322449,
+            "val_top5_accuracy": 1.0,
+            "learning_rate": 1.9999999494757503e-05
+        },
+        {
+            "accuracy": 0.9997023940086364,
+            "loss": 0.6907371282577515,
+            "top5_accuracy": 1.0,
+            "val_accuracy": 0.9944444298744202,
+            "val_loss": 0.7008034586906433,
+            "val_top5_accuracy": 1.0,
+            "learning_rate": 1.9999999494757503e-05
+        },
+        {
+            "accuracy": 0.9988095164299012,
+            "loss": 0.6917880773544312,
+            "top5_accuracy": 1.0,
+            "val_accuracy": 0.9944444298744202,
+            "val_loss": 0.7013214230537415,
+            "val_top5_accuracy": 1.0,
+            "learning_rate": 1.9999999494757503e-05
+        },
+        {
+            "accuracy": 0.9997023940086364,
+            "loss": 0.6887047290802002,
+            "top5_accuracy": 1.0,
+            "val_accuracy": 0.9930555820465088,
+            "val_loss": 0.7001532912254333,
+            "val_top5_accuracy": 1.0,
+            "learning_rate": 1.9999999494757503e-05
+        },
+        {
+            "accuracy": 0.999404788017273,
+            "loss": 0.6882638335227966,
+            "top5_accuracy": 1.0,
+            "val_accuracy": 0.9958333373069764,
+            "val_loss": 0.7003666162490845,
+            "val_top5_accuracy": 1.0,
+            "learning_rate": 1.9999999494757503e-05
+        },
+        {
+            "accuracy": 0.9997023940086364,
+            "loss": 0.6881409883499146,
+            "top5_accuracy": 1.0,
+            "val_accuracy": 0.9944444298744202,
+            "val_loss": 0.7004361748695374,
+            "val_top5_accuracy": 1.0,
+            "learning_rate": 1.9999999494757503e-05
+        },
+        {
+            "accuracy": 0.9991071224212646,
+            "loss": 0.6907779574394226,
+            "top5_accuracy": 1.0,
+            "val_accuracy": 0.9944444298744202,
+            "val_loss": 0.699872612953186,
+            "val_top5_accuracy": 1.0,
+            "learning_rate": 1.9999999494757503e-05
+        },
+        {
+            "accuracy": 1.0,
+            "loss": 0.6878470778465271,
+            "top5_accuracy": 1.0,
+            "val_accuracy": 0.9944444298744202,
+            "val_loss": 0.6986480951309204,
+            "val_top5_accuracy": 1.0,
+            "learning_rate": 1.9999999494757503e-05
+        },
+        {
+            "accuracy": 0.9997023940086364,
+            "loss": 0.6889402270317078,
+            "top5_accuracy": 1.0,
+            "val_accuracy": 0.9944444298744202,
+            "val_loss": 0.700152575969696,
+            "val_top5_accuracy": 1.0,
+            "learning_rate": 1.9999999494757503e-05
+        },
+        {
+            "accuracy": 0.9988095164299012,
+            "loss": 0.6892442107200623,
+            "top5_accuracy": 1.0,
+            "val_accuracy": 0.9944444298744202,
+            "val_loss": 0.6992189288139343,
+            "val_top5_accuracy": 1.0,
+            "learning_rate": 1.9999999494757503e-05
+        },
+        {
+            "accuracy": 0.9997023940086364,
+            "loss": 0.6879550814628601,
+            "top5_accuracy": 1.0,
+            "val_accuracy": 0.9944444298744202,
+            "val_loss": 0.6985934376716614,
+            "val_top5_accuracy": 1.0,
+            "learning_rate": 1.9999999494757503e-05
+        },
+        {
+            "accuracy": 0.9997023940086364,
+            "loss": 0.6866431832313538,
+            "top5_accuracy": 1.0,
+            "val_accuracy": 0.9944444298744202,
+            "val_loss": 0.6978713274002075,
+            "val_top5_accuracy": 1.0,
+            "learning_rate": 3.999999989900971e-06
+        }
+    ],
+    "classification_report": {
+        "amo-sparkling-milk-strawberry-200ml": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1-score": 1.0,
+            "support": 30.0
+        },
+        "cleo-mineral-220ml": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1-score": 1.0,
+            "support": 30.0
+        },
+        "emeron-alovera": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1-score": 1.0,
+            "support": 30.0
+        },
+        "frisian-flag-fullcream-225ml": {
+            "precision": 1.0,
+            "recall": 0.9666666666666668,
+            "f1-score": 0.9830508474576272,
+            "support": 30.0
+        },
+        "frisian-flag-strawberry-225ml": {
+            "precision": 0.967741935483871,
+            "recall": 1.0,
+            "f1-score": 0.9836065573770492,
+            "support": 30.0
+        },
+        "gemez-enaak-22g": {
+            "precision": 0.967741935483871,
+            "recall": 1.0,
+            "f1-score": 0.9836065573770492,
+            "support": 30.0
+        },
+        "giv-hijab-rose-water": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1-score": 1.0,
+            "support": 30.0
+        },
+        "indomie-goreng": {
+            "precision": 1.0,
+            "recall": 0.9333333333333332,
+            "f1-score": 0.9655172413793104,
+            "support": 30.0
+        },
+        "indomie-goreng-jumbo": {
+            "precision": 0.967741935483871,
+            "recall": 1.0,
+            "f1-score": 0.9836065573770492,
+            "support": 30.0
+        },
+        "masako-ayam": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1-score": 1.0,
+            "support": 30.0
+        },
+        "mie-sedaap-ayam-bawang": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1-score": 1.0,
+            "support": 30.0
+        },
+        "mie-sedaap-laksa": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1-score": 1.0,
+            "support": 30.0
+        },
+        "milku-coklat-200ml": {
+            "precision": 0.967741935483871,
+            "recall": 1.0,
+            "f1-score": 0.9836065573770492,
+            "support": 30.0
+        },
+        "milku-original-200ml": {
+            "precision": 1.0,
+            "recall": 0.9666666666666668,
+            "f1-score": 0.9830508474576272,
+            "support": 30.0
+        },
+        "pepsodent-merah-72g": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1-score": 1.0,
+            "support": 30.0
+        },
+        "sarimi-ayam-bawang": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1-score": 1.0,
+            "support": 30.0
+        },
+        "siiplah-mineral-220ml": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1-score": 1.0,
+            "support": 30.0
+        },
+        "soffell-kuning13lt": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1-score": 1.0,
+            "support": 30.0
+        },
+        "soffell-unggu-13lt": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1-score": 1.0,
+            "support": 30.0
+        },
+        "soklin-lantai-freesia-rose-52ml": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1-score": 1.0,
+            "support": 30.0
+        },
+        "soklin-liquid-korean-camellia-22g": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1-score": 1.0,
+            "support": 30.0
+        },
+        "soklin-royale-starry-night": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1-score": 1.0,
+            "support": 30.0
+        },
+        "ultramilk-fullcream-200ml": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1-score": 1.0,
+            "support": 30.0
+        },
+        "vica-mineral-600ml": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1-score": 1.0,
+            "support": 30.0
+        },
+        "accuracy": {
+            "precision": 0.9944444444444444,
+            "recall": 0.9944444444444444,
+            "f1-score": 0.9944444444444444,
+            "support": 0.9944444444444444
+        },
+        "macro avg": {
+            "precision": 0.9946236559139784,
+            "recall": 0.9944444444444444,
+            "f1-score": 0.9944185485751152,
+            "support": 720.0
+        },
+        "weighted avg": {
+            "precision": 0.9946236559139784,
+            "recall": 0.9944444444444444,
+            "f1-score": 0.9944185485751152,
+            "support": 720.0
+        }
+    },
+    "error_summary": [
+        {
+            "true_label": "indomie-goreng",
+            "total_errors": 2,
+            "most_confused_with": "gemez-enaak-22g",
+            "most_confused_count": 1,
+            "avg_confidence": 0.1968
+        },
+        {
+            "true_label": "frisian-flag-fullcream-225ml",
+            "total_errors": 1,
+            "most_confused_with": "frisian-flag-strawberry-225ml",
+            "most_confused_count": 1,
+            "avg_confidence": 0.4651
+        },
+        {
+            "true_label": "milku-original-200ml",
+            "total_errors": 1,
+            "most_confused_with": "milku-coklat-200ml",
+            "most_confused_count": 1,
+            "avg_confidence": 0.1839
+        }
+    ],
+    "misclassified_samples": [
+        {
+            "filepath": "/kaggle/working/hf_dataset/data/indomie-goreng/indomie-goreng_8bts1_070.jpg",
+            "true_label": "indomie-goreng",
+            "predicted_label": "gemez-enaak-22g",
+            "confidence": 0.1978,
+            "true_confidence": 0.0434
+        },
+        {
+            "filepath": "/kaggle/working/hf_dataset/data/indomie-goreng/indomie-goreng_bagum_067.jpg",
+            "true_label": "indomie-goreng",
+            "predicted_label": "indomie-goreng-jumbo",
+            "confidence": 0.1957,
+            "true_confidence": 0.0676
+        },
+        {
+            "filepath": "/kaggle/working/hf_dataset/data/frisian-flag-fullcream-225ml/frisian-flag-fullcream-225ml_6qgzd_169.jpg",
+            "true_label": "frisian-flag-fullcream-225ml",
+            "predicted_label": "frisian-flag-strawberry-225ml",
+            "confidence": 0.4651,
+            "true_confidence": 0.2504
+        },
+        {
+            "filepath": "/kaggle/working/hf_dataset/data/milku-original-200ml/milku-original-200ml_vhvh6_036.jpg",
+            "true_label": "milku-original-200ml",
+            "predicted_label": "milku-coklat-200ml",
+            "confidence": 0.1839,
+            "true_confidence": 0.0914
+        }
+    ],
+    "generated_at": "2026-08-05 14:33:47"
+}
