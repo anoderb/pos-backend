@@ -1,5 +1,10 @@
 import { supabaseAdmin } from '../../config/database.js';
 
+function sanitize(input) {
+  if (typeof input !== 'string') return input;
+  return input.replace(/<[^>]*>/g, '').replace(/[{}<>$%]/g, '').trim();
+}
+
 export const supplierService = {
   async list(toko_id) {
     const { data, error } = await supabaseAdmin
@@ -22,6 +27,18 @@ export const supplierService = {
 
     if (!clean.nama || !clean.nama.trim()) {
       throw new Error('Nama supplier wajib diisi');
+    }
+    clean.nama = sanitize(clean.nama);
+
+    // Cek duplikat nama
+    const { data: existing } = await supabaseAdmin
+      .from('supplier')
+      .select('id')
+      .eq('toko_id', toko_id)
+      .eq('nama', clean.nama)
+      .maybeSingle();
+    if (existing) {
+      throw new Error('Nama supplier sudah terdaftar');
     }
 
     const { data, error } = await supabaseAdmin

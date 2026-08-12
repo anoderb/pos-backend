@@ -25,6 +25,9 @@ export const shiftController = {
     if (!shift_id || kas_aktual === undefined) {
       return reply.code(400).send({ berhasil: false, pesan: 'shift_id dan kas_aktual wajib diisi' });
     }
+    if (kas_aktual < 0) {
+      return reply.code(400).send({ berhasil: false, pesan: 'Kas aktual tidak boleh negatif' });
+    }
 
     const data = await shiftService.tutupShift(request.toko_id, request.pengguna.id, {
       shift_id,

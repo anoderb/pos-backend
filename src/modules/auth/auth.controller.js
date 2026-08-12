@@ -82,13 +82,16 @@ export const authController = {
   },
 
   async gantiPassword(request, reply) {
-    const { new_password } = request.body || {};
+    const { old_password, new_password } = request.body || {};
+    if (!old_password) {
+      return reply.code(400).send({ berhasil: false, pesan: 'Password lama wajib diisi' });
+    }
     if (!new_password) {
       return reply.code(400).send({ berhasil: false, pesan: 'Password baru wajib diisi' });
     }
 
     try {
-      const hasil = await authService.gantiPassword(request.pengguna.email, new_password);
+      const hasil = await authService.gantiPassword(request.pengguna.email, old_password, new_password);
       return reply.send(responseSukses(hasil, hasil.pesan));
     } catch (err) {
       return reply.code(400).send({ berhasil: false, pesan: err.message });

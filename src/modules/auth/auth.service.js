@@ -172,7 +172,13 @@ export const authService = {
     }
 
     return {
-      session: data.session,
+      session: {
+        access_token: data.session.access_token,
+        refresh_token: data.session.refresh_token,
+        expires_at: data.session.expires_at,
+        expires_in: data.session.expires_in,
+        token_type: data.session.token_type,
+      },
       pengguna: {
         id: profil.id,
         nama: profil.nama,
@@ -276,18 +282,31 @@ export const authService = {
   },
 
   // 5b. Ganti Password Langsung (Self-Service, user sudah login JWT)
-  async gantiPassword(email, new_password) {
+  async gantiPassword(email, old_password, new_password) {
+    if (!old_password) {
+      throw new Error('Password lama wajib diisi');
+    }
     if (!new_password || new_password.length < 8) {
       throw new Error('Password baru minimal 8 karakter');
     }
 
-    // Cari user auth ID dari email
+    // 1. Verifikasi old password
+    const { error: authErr } = await supabaseAuth.auth.signInWithPassword({
+      email,
+      password: old_password,
+    });
+    if (authErr) {
+      throw new Error('Password lama salah');
+    }
+
+    // 2. Cari user auth ID dari email
     const { data: authUsers } = await supabaseAdmin.auth.admin.listUsers();
     const authUser = authUsers?.users?.find(u => u.email?.toLowerCase() === email.toLowerCase());
     if (!authUser) {
       throw new Error('Akun pengguna tidak ditemukan di sistem auth');
     }
 
+    // 3. Update password
     const { error } = await supabaseAdmin.auth.admin.updateUserById(authUser.id, {
       password: new_password,
     });
@@ -295,6 +314,9 @@ export const authService = {
     if (error) {
       throw new Error('Gagal mengubah password: ' + error.message);
     }
+
+    // 4. Sign out all sessions
+    await supabaseAdmin.auth.admin.signOut(authUser.id).catch(() => {});
 
     return { pesan: 'Password berhasil diperbarui! Silakan login ulang.' };
   },

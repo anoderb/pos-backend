@@ -13,9 +13,15 @@ export const kategoriService = {
   },
 
   async tambah(toko_id, { nama }) {
+    if (!nama || !nama.trim()) {
+      throw new Error('Nama kategori wajib diisi');
+    }
+    if (nama.length > 200) {
+      throw new Error('Nama kategori maksimal 200 karakter');
+    }
     const { data, error } = await supabaseAdmin
       .from('kategori')
-      .insert({ toko_id, nama })
+      .insert({ toko_id, nama: nama.trim() })
       .select()
       .single();
 
@@ -24,9 +30,15 @@ export const kategoriService = {
   },
 
   async update(toko_id, id, { nama }) {
+    if (!nama || !nama.trim()) {
+      throw new Error('Nama kategori wajib diisi');
+    }
+    if (nama.length > 200) {
+      throw new Error('Nama kategori maksimal 200 karakter');
+    }
     const { data, error } = await supabaseAdmin
       .from('kategori')
-      .update({ nama })
+      .update({ nama: nama.trim() })
       .eq('toko_id', toko_id)
       .eq('id', id)
       .select()

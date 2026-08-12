@@ -10,7 +10,7 @@ export const tokoController = {
 
   // PUT /api/toko
   async updateToko(request, reply) {
-    const toko = await tokoService.updateToko(request.toko_id, request.body || {});
+    const toko = await tokoService.updateToko(request.toko_id, request.body || {}, request.pengguna.id);
     return reply.send(responseSukses(toko, 'Pengaturan toko berhasil diperbarui'));
   },
 

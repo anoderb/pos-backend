@@ -60,8 +60,17 @@ export const produkService = {
       throw new Error('Nama produk wajib diisi');
     }
 
-    if (!harga_jual_default || Number(harga_jual_default) <= 0) {
+    if (harga_jual_default === undefined || Number(harga_jual_default) <= 0) {
       throw new Error('Harga jual wajib diisi dan harus lebih dari 0');
+    }
+    if (stok !== undefined && Number(stok) < 0) {
+      throw new Error('Stok tidak boleh negatif');
+    }
+    if (hpp !== undefined && Number(hpp) < 0) {
+      throw new Error('HPP tidak boleh negatif');
+    }
+    if (stok_minimum !== undefined && Number(stok_minimum) < 0) {
+      throw new Error('Stok minimum tidak boleh negatif');
     }
 
     const namaBersih = sanitizeInput(nama.trim());
