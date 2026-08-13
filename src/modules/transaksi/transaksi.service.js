@@ -28,6 +28,25 @@ export const transaksiService = {
 
     const nomor_transaksi = payload.nomor_transaksi || generateNomorTransaksi();
 
+    // Validasi field transaksi
+    // FE legacy uses `cash`; keep alias during API transition.
+    const VALID_METODE_BAYAR = ['cash', 'tunai', 'qris', 'transfer', 'kartu_kredit', 'kartu_debit', 'lainnya'];
+    if (!metode_bayar || !VALID_METODE_BAYAR.includes(metode_bayar)) {
+      throw new Error('Metode bayar tidak valid. Pilihan: tunai, qris, transfer, kartu_kredit, kartu_debit, lainnya');
+    }
+    if (total === undefined || Number(total) < 0) {
+      throw new Error('Total transaksi harus lebih dari atau sama dengan 0');
+    }
+    if (subtotal !== undefined && Number(subtotal) < 0) {
+      throw new Error('Subtotal tidak boleh negatif');
+    }
+    if (nominal_bayar !== undefined && Number(nominal_bayar) < 0) {
+      throw new Error('Nominal bayar tidak boleh negatif');
+    }
+    if (diskon_total !== undefined && Number(diskon_total) < 0) {
+      throw new Error('Diskon total tidak boleh negatif');
+    }
+
     // 1. Insert header transaksi
     const { data: tx, error: errTx } = await supabaseAdmin
       .from('transaksi')
