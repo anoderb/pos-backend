@@ -11,7 +11,7 @@ function isValidUrl(url) {
     const parsed = new URL(url);
     const blocked = ['127.0.0.1', 'localhost', '0.0.0.0', '10.', '172.16.', '192.168.', '169.254.'];
     if (blocked.some(p => parsed.hostname.startsWith(p))) return false;
-    return parsed.protocol === 'https:' || parsed.protocol === 'http:';
+    return parsed.protocol === 'https:';
   } catch { return false; }
 }
 

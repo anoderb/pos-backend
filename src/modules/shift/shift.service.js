@@ -36,7 +36,7 @@ export const shiftService = {
   async getShiftAktif(toko_id, kasir_id) {
     const { data, error } = await supabaseAdmin
       .from('shift')
-      .select('*, kasir:kasir_id(nama, email)')
+      .select('*, kasir:kasir_id(nama)')
       .eq('toko_id', toko_id)
       .eq('kasir_id', kasir_id)
       .eq('status', 'buka')
@@ -111,7 +111,7 @@ export const shiftService = {
   async listShift(toko_id) {
     const { data, error } = await supabaseAdmin
       .from('shift')
-      .select('*, kasir:kasir_id(nama, email)')
+      .select('*, kasir:kasir_id(nama)')
       .eq('toko_id', toko_id)
       .order('waktu_buka', { ascending: false });
 
@@ -123,7 +123,7 @@ export const shiftService = {
   async getShiftById(toko_id, id) {
     const { data, error } = await supabaseAdmin
       .from('shift')
-      .select('*, kasir:kasir_id(nama, email), transaksi(*)')
+      .select('*, kasir:kasir_id(nama), transaksi(*)')
       .eq('toko_id', toko_id)
       .eq('id', id)
       .single();

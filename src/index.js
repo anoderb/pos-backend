@@ -102,9 +102,11 @@ if (process.env.NODE_ENV !== 'production') {
 await fastify.register(rateLimit, {
   max: 100,
   timeWindow: '1 minute',
-  errorResponseBuilder: () => ({
+  errorResponseBuilder: (_request, context) => ({
+    statusCode: context.statusCode,
     berhasil: false,
     pesan: 'Terlalu banyak permintaan. Silakan tunggu beberapa saat lagi.',
+    retry_after_seconds: Math.ceil((context.ttl || 0) / 1000),
   }),
 });
 

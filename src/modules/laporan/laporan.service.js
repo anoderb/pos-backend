@@ -106,7 +106,7 @@ export const laporanService = {
   async getLaporanShift(toko_id, { kasir_id }) {
     let query = supabaseAdmin
       .from('shift')
-      .select('*, kasir:kasir_id(nama, email)')
+      .select('*, kasir:kasir_id(nama)')
       .eq('toko_id', toko_id)
       .order('waktu_buka', { ascending: false });
 
