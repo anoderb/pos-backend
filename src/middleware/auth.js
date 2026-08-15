@@ -1,4 +1,7 @@
 import { supabaseAdmin } from '../config/database.js';
+import { isAccessTokenRevoked } from '../utils/revoked-tokens.js';
+import { parsePagination } from '../utils/pagination.js';
+import { validateUuidParams } from '../utils/validation.js';
 
 // Middleware verifikasi JWT Bearer Token
 export async function authenticate(request, reply) {
@@ -12,6 +15,12 @@ export async function authenticate(request, reply) {
     }
 
     const token = authHeader.split(' ')[1];
+    if (isAccessTokenRevoked(token)) {
+      return reply.code(401).send({
+        berhasil: false,
+        pesan: 'Sesi login telah dicabut. Silakan login kembali.',
+      });
+    }
 
     // Verifikasi token via Supabase Auth
     const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
@@ -52,6 +61,25 @@ export async function authenticate(request, reply) {
     return reply.code(401).send({
       berhasil: false,
       pesan: 'Authentication Error: ' + err.message,
+    });
+  }
+}
+
+// Reject client-controlled tenant overrides on owner/kasir namespaces.
+// Tenant scope must always come from authenticated pengguna.toko_id.
+export async function attachPagination(request) {
+  request.pagination = parsePagination(request.query);
+}
+
+export { validateUuidParams };
+
+export async function rejectTenantOverride(request, reply) {
+  const queryTenant = request.query?.toko_id;
+  const bodyTenant = request.body?.toko_id;
+  if (queryTenant !== undefined || bodyTenant !== undefined) {
+    return reply.code(400).send({
+      berhasil: false,
+      pesan: 'toko_id tidak boleh dikirim dari client',
     });
   }
 }

@@ -39,7 +39,7 @@ export const shiftController = {
 
   // GET /api/shift
   async list(request, reply) {
-    const data = await shiftService.listShift(request.toko_id);
+    const data = await shiftService.listShift(request.toko_id, request.pagination);
     return reply.send(responseSukses(data, 'Daftar semua shift toko'));
   },
 

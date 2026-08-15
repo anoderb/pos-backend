@@ -84,7 +84,7 @@ export const transaksiController = {
   // GET /api/transaksi
   async list(request, reply) {
     const { tanggal, kasir_id, metode_bayar } = request.query || {};
-    const list = await transaksiService.list(request.toko_id, { tanggal, kasir_id, metode_bayar });
+    const list = await transaksiService.list(request.toko_id, { tanggal, kasir_id, metode_bayar, pagination: request.pagination });
     return reply.send(responseSukses(list, 'Daftar transaksi'));
   },
 

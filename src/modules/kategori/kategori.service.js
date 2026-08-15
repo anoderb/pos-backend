@@ -1,18 +1,22 @@
 import { supabaseAdmin } from '../../config/database.js';
+import { sanitizePlainText } from '../../utils/sanitize.js';
 
 export const kategoriService = {
-  async list(toko_id) {
+  async list(toko_id, pagination) {
     const { data, error } = await supabaseAdmin
       .from('kategori')
       .select('*')
       .eq('toko_id', toko_id)
       .order('nama', { ascending: true });
 
+    if (pagination) query = query.range(pagination.offset, pagination.end);
+
     if (error) throw new Error('Gagal mengambil daftar kategori');
     return data;
   },
 
   async tambah(toko_id, { nama }) {
+    nama = sanitizePlainText(nama, { field: 'Nama kategori', max: 200 });
     if (!nama || !nama.trim()) {
       throw new Error('Nama kategori wajib diisi');
     }
@@ -30,6 +34,7 @@ export const kategoriService = {
   },
 
   async update(toko_id, id, { nama }) {
+    nama = sanitizePlainText(nama, { field: 'Nama kategori', max: 200 });
     if (!nama || !nama.trim()) {
       throw new Error('Nama kategori wajib diisi');
     }

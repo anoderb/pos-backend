@@ -1,4 +1,4 @@
-import { authenticate } from '../../middleware/auth.js';
+import { authenticate, rejectTenantOverride, attachPagination, validateUuidParams } from '../../middleware/auth.js';
 import { transaksiController } from '../../modules/transaksi/transaksi.controller.js';
 import { shiftController } from '../../modules/shift/shift.controller.js';
 import { produkController } from '../../modules/produk/produk.controller.js';
@@ -10,6 +10,9 @@ import { satuanController } from '../../modules/satuan/satuan.controller.js';
 
 export async function kasirRoutes(fastify, options) {
   fastify.addHook('preHandler', authenticate);
+  fastify.addHook('preHandler', rejectTenantOverride);
+  fastify.addHook('preHandler', attachPagination);
+  fastify.addHook('preHandler', validateUuidParams);
 
   const kasirTag = { schema: { tags: ['Kasir Operations (/api/kasir)'] } };
 

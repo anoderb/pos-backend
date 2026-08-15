@@ -1,12 +1,8 @@
 import { supabaseAdmin } from '../../config/database.js';
-
-function sanitize(input) {
-  if (typeof input !== 'string') return input;
-  return input.replace(/<[^>]*>/g, '').replace(/[{}<>$%]/g, '').trim();
-}
+import { sanitizePlainText } from '../../utils/sanitize.js';
 
 export const pelangganService = {
-  async list(toko_id, search) {
+  async list(toko_id, search, pagination) {
     let query = supabaseAdmin
       .from('pelanggan')
       .select('*')
@@ -16,6 +12,7 @@ export const pelangganService = {
     if (search) {
       query = query.or(`nama.ilike.%${search}%,no_hp.ilike.%${search}%`);
     }
+    if (pagination) query = query.range(pagination.offset, pagination.end);
 
     const { data, error } = await query;
     if (error) throw new Error('Gagal mengambil daftar pelanggan');
@@ -32,7 +29,7 @@ export const pelangganService = {
     if (!clean.nama || !clean.nama.trim()) {
       throw new Error('Nama pelanggan wajib diisi');
     }
-    clean.nama = sanitize(clean.nama);
+    clean.nama = sanitizePlainText(clean.nama, { field: 'Nama pelanggan', max: 200 });
 
     // Cek duplikat nama
     const { data: existing } = await supabaseAdmin
@@ -73,6 +70,9 @@ export const pelangganService = {
     delete clean.toko_id;
     delete clean.created_at;
     delete clean.updated_at;
+    if (clean.nama !== undefined) {
+      clean.nama = sanitizePlainText(clean.nama, { field: 'Nama pelanggan', max: 200 });
+    }
 
     const { data, error } = await supabaseAdmin
       .from('pelanggan')

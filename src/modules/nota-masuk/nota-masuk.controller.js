@@ -13,7 +13,7 @@ export const notaMasukController = {
   },
 
   async list(request, reply) {
-    const list = await notaMasukService.listNotaMasuk(request.toko_id);
+    const list = await notaMasukService.listNotaMasuk(request.toko_id, request.pagination);
     return reply.send(responseSukses(list, 'Daftar nota masuk'));
   },
 

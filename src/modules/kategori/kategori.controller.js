@@ -3,7 +3,7 @@ import { responseSukses } from '../../utils/response.js';
 
 export const kategoriController = {
   async list(request, reply) {
-    const data = await kategoriService.list(request.toko_id);
+    const data = await kategoriService.list(request.toko_id, request.pagination);
     return reply.send(responseSukses(data, 'Daftar kategori toko'));
   },
 

@@ -1,4 +1,4 @@
-import { authenticate, requireOwner } from '../../middleware/auth.js';
+import { authenticate, requireOwner, rejectTenantOverride, attachPagination, validateUuidParams } from '../../middleware/auth.js';
 import { laporanController } from '../../modules/laporan/laporan.controller.js';
 import { penggunaController } from '../../modules/pengguna/pengguna.controller.js';
 import { produkController } from '../../modules/produk/produk.controller.js';
@@ -15,6 +15,9 @@ import { shiftController } from '../../modules/shift/shift.controller.js';
 
 export async function ownerRoutes(fastify, options) {
   fastify.addHook('preHandler', authenticate);
+  fastify.addHook('preHandler', rejectTenantOverride);
+  fastify.addHook('preHandler', attachPagination);
+  fastify.addHook('preHandler', validateUuidParams);
   fastify.addHook('preHandler', requireOwner);
 
   const ownerTag = (summary) => ({ schema: { tags: ['Owner Operations (/api/owner)'], summary } });

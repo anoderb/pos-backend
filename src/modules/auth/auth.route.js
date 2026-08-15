@@ -10,13 +10,31 @@ export async function authRoutes(fastify, options) {
       },
     },
   };
+  const loginRateLimitConfig = {
+    config: {
+      rateLimit: {
+        max: 5,
+        timeWindow: '15 minutes',
+        keyGenerator: (request) => `${request.ip}:${String(request.body?.email || '').trim().toLowerCase()}`,
+      },
+    },
+  };
+  const forgotPasswordRateLimitConfig = {
+    config: {
+      rateLimit: {
+        max: 3,
+        timeWindow: '15 minutes',
+        keyGenerator: (request) => `${request.ip}:${String(request.body?.email || '').trim().toLowerCase()}`,
+      },
+    },
+  };
 
   // Public Routes (Rate limited anti-spam)
   fastify.post('/register', authRateLimitConfig, authController.register);
-  fastify.post('/login', authRateLimitConfig, authController.login);
+  fastify.post('/login', loginRateLimitConfig, authController.login);
   fastify.post('/oauth-sync', authController.oauthSync);
-  fastify.post('/lupa-password', authRateLimitConfig, authController.lupaPassword);
-  fastify.post('/reset-password', authRateLimitConfig, authController.resetPassword);
+  fastify.post('/lupa-password', forgotPasswordRateLimitConfig, authController.lupaPassword);
+  fastify.post('/reset-password', forgotPasswordRateLimitConfig, authController.resetPassword);
   fastify.post('/refresh', authController.refresh);
 
   // Authenticated Routes

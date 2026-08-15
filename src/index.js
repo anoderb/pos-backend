@@ -6,6 +6,7 @@ import rateLimit from '@fastify/rate-limit';
 import jwt from '@fastify/jwt';
 import fastifyStatic from '@fastify/static';
 import fastifyMultipart from '@fastify/multipart';
+import fastifyCookie from '@fastify/cookie';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -63,6 +64,9 @@ await fastify.register(fastifyMultipart, {
   },
 });
 
+// HttpOnly cookie for refresh-token rotation.
+await fastify.register(fastifyCookie);
+
 // Register Swagger OpenAPI Documentation Generator (Development Only)
 if (process.env.NODE_ENV !== 'production') {
   await fastify.register(fastifySwagger, {
@@ -104,8 +108,8 @@ await fastify.register(rateLimit, {
   timeWindow: '1 minute',
   errorResponseBuilder: (_request, context) => ({
     statusCode: context.statusCode,
-    berhasil: false,
-    pesan: 'Terlalu banyak permintaan. Silakan tunggu beberapa saat lagi.',
+    error: 'Too Many Requests',
+    message: `Terlalu banyak permintaan. Coba lagi dalam ${context.after}.`,
     retry_after_seconds: Math.ceil((context.ttl || 0) / 1000),
   }),
 });
@@ -128,7 +132,11 @@ fastify.addHook('onSend', (request, reply, payload, done) => {
 
 // Centralized Error Handler (SEC-10)
 fastify.setErrorHandler((error, request, reply) => {
-  const statusCode = error.statusCode || 500;
+  const rawMessage = String(error.message || '');
+  const isValidationError = Boolean(error.validation)
+    || /wajib|tidak valid|tidak boleh|maksimal|minimal|harus berupa|sudah terdaftar|tidak mencukupi/i.test(rawMessage);
+  const isNotFoundError = /tidak ditemukan|not found/i.test(rawMessage);
+  const statusCode = error.statusCode || (isValidationError ? 400 : isNotFoundError ? 404 : 500);
   const isDev = process.env.NODE_ENV !== 'production';
   const message = (isDev || statusCode !== 500)
     ? error.message
@@ -138,6 +146,10 @@ fastify.setErrorHandler((error, request, reply) => {
     berhasil: false,
     pesan: message,
   });
+});
+
+fastify.setNotFoundHandler((request, reply) => {
+  reply.code(404).send({ berhasil: false, pesan: 'Endpoint tidak ditemukan' });
 });
 
 // Health check endpoint
@@ -151,11 +163,13 @@ fastify.get('/health', async () => ({
 // API Index route
 fastify.get('/api', async () => ({
   berhasil: true,
-  pesan: 'Selamat datang di REST API Tokiva POS Backend Engine (tokiva.biz.id)',
-  versi: '1.0.0',
-  total_modul: 18,
-  namespaces: ['/api/kasir/*', '/api/owner/*', '/api/admin/*', '/api/auth/*'],
-  docs_url: 'http://localhost:5000/docs',
+  pesan: process.env.NODE_ENV === 'production' ? 'API aktif' : 'Selamat datang di REST API Backend Engine',
+  ...(process.env.NODE_ENV === 'production' ? {} : {
+    versi: '1.0.0',
+    total_modul: 18,
+    namespaces: ['/api/kasir/*', '/api/owner/*', '/api/admin/*', '/api/auth/*'],
+    docs_url: '/docs',
+  }),
 }));
 
 // Public Auth Routes

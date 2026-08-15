@@ -1,18 +1,14 @@
 import { supabaseAdmin } from '../../config/database.js';
+import { sanitizePlainText } from '../../utils/sanitize.js';
 
-function sanitizeInput(str) {
-  if (!str) return str;
-  return String(str)
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#x27;')
-    .replace(/\//g, '&#x2F;');
+async function assertProductTenant(toko_id, produk_id) {
+  const { data, error } = await supabaseAdmin.from('produk').select('id').eq('toko_id', toko_id).eq('id', produk_id).maybeSingle();
+  if (error || !data) throw new Error('Produk tidak ditemukan');
 }
 
 export const produkService = {
   // List Produk dengan Filter
-  async listProduk(toko_id, { kategori_id, stok_kritis, aktif_ai, search } = {}) {
+  async listProduk(toko_id, { kategori_id, stok_kritis, aktif_ai, search, pagination } = {}) {
     let query = supabaseAdmin
       .from('produk')
       .select('*, kategori:kategori_id(nama), satuan_dasar:satuan_dasar_id(nama), produk_satuan_jual(*)')
@@ -23,6 +19,7 @@ export const produkService = {
     if (kategori_id) query = query.eq('kategori_id', kategori_id);
     if (aktif_ai !== undefined) query = query.eq('aktif_ai', aktif_ai === 'true' || aktif_ai === true);
     if (search) query = query.ilike('nama', `%${search}%`);
+    if (pagination) query = query.range(pagination.offset, pagination.end);
 
     const { data, error } = await query;
     if (error) throw new Error('Gagal mengambil daftar produk: ' + error.message);
@@ -73,7 +70,7 @@ export const produkService = {
       throw new Error('Stok minimum tidak boleh negatif');
     }
 
-    const namaBersih = sanitizeInput(nama.trim());
+    const namaBersih = sanitizePlainText(nama, { field: 'Nama produk', max: 200 });
     let finalFotoUrl = foto_url || null;
 
     if (foto_url && foto_url.startsWith('data:image')) {
@@ -221,7 +218,7 @@ export const produkService = {
     }
 
     if (updatePayload.nama) {
-      updatePayload.nama = sanitizeInput(updatePayload.nama.trim());
+      updatePayload.nama = sanitizePlainText(updatePayload.nama, { field: 'Nama produk', max: 200 });
     }
 
     // Resolve satuan_dasar_id name→UUID before updating produk table
@@ -393,7 +390,8 @@ export const produkService = {
   },
 
   // --- SUB-MODULE SATUAN JUAL ---
-  async listSatuanJual(produk_id) {
+  async listSatuanJual(toko_id, produk_id) {
+    await assertProductTenant(toko_id, produk_id);
     const { data, error } = await supabaseAdmin
       .from('produk_satuan_jual')
       .select('*, satuan:satuan_id(nama)')
@@ -402,7 +400,8 @@ export const produkService = {
     return data;
   },
 
-  async tambahSatuanJual(produk_id, payload) {
+  async tambahSatuanJual(toko_id, produk_id, payload) {
+    await assertProductTenant(toko_id, produk_id);
     const clean = { ...payload };
     delete clean.id;
     delete clean.produk_id;
@@ -417,7 +416,8 @@ export const produkService = {
     return data;
   },
 
-  async updateSatuanJual(produk_id, sid, payload) {
+  async updateSatuanJual(toko_id, produk_id, sid, payload) {
+    await assertProductTenant(toko_id, produk_id);
     const clean = { ...payload };
     delete clean.id;
     delete clean.produk_id;
@@ -434,7 +434,8 @@ export const produkService = {
     return data;
   },
 
-  async hapusSatuanJual(produk_id, sid) {
+  async hapusSatuanJual(toko_id, produk_id, sid) {
+    await assertProductTenant(toko_id, produk_id);
     const { data, error } = await supabaseAdmin
       .from('produk_satuan_jual')
       .delete()
@@ -447,7 +448,8 @@ export const produkService = {
   },
 
   // --- SUB-MODULE SATUAN BELI ---
-  async listSatuanBeli(produk_id) {
+  async listSatuanBeli(toko_id, produk_id) {
+    await assertProductTenant(toko_id, produk_id);
     const { data, error } = await supabaseAdmin
       .from('produk_satuan_beli')
       .select('*, satuan:satuan_id(nama)')
@@ -456,7 +458,8 @@ export const produkService = {
     return data;
   },
 
-  async tambahSatuanBeli(produk_id, payload) {
+  async tambahSatuanBeli(toko_id, produk_id, payload) {
+    await assertProductTenant(toko_id, produk_id);
     const clean = { ...payload };
     delete clean.id;
     delete clean.produk_id;
@@ -471,7 +474,8 @@ export const produkService = {
     return data;
   },
 
-  async updateSatuanBeli(produk_id, sid, payload) {
+  async updateSatuanBeli(toko_id, produk_id, sid, payload) {
+    await assertProductTenant(toko_id, produk_id);
     const clean = { ...payload };
     delete clean.id;
     delete clean.produk_id;
@@ -489,7 +493,8 @@ export const produkService = {
     return data;
   },
 
-  async hapusSatuanBeli(produk_id, sid) {
+  async hapusSatuanBeli(toko_id, produk_id, sid) {
+    await assertProductTenant(toko_id, produk_id);
     const { data, error } = await supabaseAdmin
       .from('produk_satuan_beli')
       .delete()

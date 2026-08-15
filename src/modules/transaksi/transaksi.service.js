@@ -174,7 +174,7 @@ export const transaksiService = {
   },
 
   // List Transaksi
-  async list(toko_id, { tanggal, kasir_id, metode_bayar } = {}) {
+  async list(toko_id, { tanggal, kasir_id, metode_bayar, pagination } = {}) {
     let query = supabaseAdmin
       .from('transaksi')
       .select('*, kasir:kasir_id(nama), pelanggan:pelanggan_id(nama)')
@@ -183,6 +183,7 @@ export const transaksiService = {
 
     if (kasir_id) query = query.eq('kasir_id', kasir_id);
     if (metode_bayar) query = query.eq('metode_bayar', metode_bayar);
+    if (pagination) query = query.range(pagination.offset, pagination.end);
 
     const { data, error } = await query;
     if (error) throw new Error('Gagal mengambil daftar transaksi');

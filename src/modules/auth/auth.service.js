@@ -7,6 +7,9 @@ function validatePasswordComplexity(password) {
   if (!password || password.length < 8) {
     throw new Error('Password minimal harus 8 karakter');
   }
+  if (Buffer.byteLength(password, 'utf8') > 72) {
+    throw new Error('Password maksimal 72 byte');
+  }
   if (!/[A-Z]/.test(password)) {
     throw new Error('Password harus mengandung minimal 1 huruf besar (A-Z)');
   }
@@ -37,7 +40,7 @@ export const authService = {
       .maybeSingle();
 
     if (existingUser) {
-      throw new Error('Email ini sudah terdaftar di sistem. Silakan login.');
+      throw new Error('Registrasi tidak dapat diproses. Silakan periksa data atau gunakan akun lain.');
     }
 
     const { data: authUser, error: authErr } = await supabaseAdmin.auth.admin.createUser({
@@ -172,6 +175,7 @@ export const authService = {
     }
 
     return {
+      // Controller moves refresh_token into an HttpOnly cookie.
       session: {
         access_token: data.session.access_token,
         refresh_token: data.session.refresh_token,
@@ -243,25 +247,15 @@ export const authService = {
   async lupaPassword(email) {
     if (!email || !EMAIL_REGEX.test(email)) throw new Error('Format email tidak valid');
 
-    const { data: user } = await supabaseAdmin
-      .from('pengguna')
-      .select('nama')
-      .eq('email', email)
-      .maybeSingle();
-
-    if (!user) {
-      return { pesan: 'Jika email terdaftar, link reset akan dikirim.' };
-    }
-
     const { error } = await supabaseAuth.auth.resetPasswordForEmail(email, {
       redirectTo: 'https://tokiva.biz.id/reset-password',
     });
 
     if (error) {
-      throw new Error('Gagal mengirim email reset: ' + error.message);
+      throw new Error('Permintaan reset password tidak dapat diproses');
     }
 
-    return { pesan: 'Link reset password telah dikirim ke email Anda.' };
+    return { pesan: 'Jika email terdaftar, link reset akan dikirim.' };
   },
 
   // 5. Reset Password (Kirim Email Magic Link Secure)
@@ -275,10 +269,10 @@ export const authService = {
     });
 
     if (error) {
-      throw new Error('Gagal mengirim email reset: ' + error.message);
+      throw new Error('Permintaan reset password tidak dapat diproses');
     }
 
-    return { pesan: 'Link reset password telah dikirim ke email Anda. Silakan cek kotak masuk email Anda.' };
+    return { pesan: 'Jika email terdaftar, link reset akan dikirim.' };
   },
 
   // 5b. Ganti Password Langsung (Self-Service, user sudah login JWT)
@@ -288,6 +282,9 @@ export const authService = {
     }
     if (!new_password || new_password.length < 8) {
       throw new Error('Password baru minimal 8 karakter');
+    }
+    if (Buffer.byteLength(new_password, 'utf8') > 72) {
+      throw new Error('Password maksimal 72 byte');
     }
 
     // 1. Verifikasi old password

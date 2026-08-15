@@ -1,9 +1,5 @@
 import { supabaseAdmin } from '../../config/database.js';
-
-function sanitize(input) {
-  if (typeof input !== 'string') return input;
-  return input.replace(/<[^>]*>/g, '').replace(/[{}<>$%]/g, '').trim();
-}
+import { sanitizeOptionalText } from '../../utils/sanitize.js';
 
 function isValidUrl(url) {
   if (!url) return true;
@@ -11,7 +7,9 @@ function isValidUrl(url) {
     const parsed = new URL(url);
     const blocked = ['127.0.0.1', 'localhost', '0.0.0.0', '10.', '172.16.', '192.168.', '169.254.'];
     if (blocked.some(p => parsed.hostname.startsWith(p))) return false;
-    return parsed.protocol === 'https:';
+    if (parsed.protocol !== 'https:' || parsed.username || parsed.password) return false;
+    const configuredHost = process.env.SUPABASE_URL ? new URL(process.env.SUPABASE_URL).hostname : null;
+    return Boolean(configuredHost && (parsed.hostname === configuredHost || parsed.hostname.endsWith('.supabase.co')));
   } catch { return false; }
 }
 
@@ -50,12 +48,12 @@ export const tokoService = {
     }
 
     const updateData = {};
-    if (clean.nama !== undefined) updateData.nama = clean.nama;
-    if (clean.alamat !== undefined) updateData.alamat = clean.alamat;
-    if (clean.no_telp !== undefined) updateData.no_telp = clean.no_telp;
-    if (clean.tema !== undefined) updateData.tema = clean.tema;
-    if (clean.warna_utama !== undefined) updateData.warna_utama = clean.warna_utama;
-    if (clean.info_rekening !== undefined) updateData.info_rekening = sanitize(clean.info_rekening);
+    if (clean.nama !== undefined) updateData.nama = sanitizeOptionalText(clean.nama, { max: 200 });
+    if (clean.alamat !== undefined) updateData.alamat = sanitizeOptionalText(clean.alamat, { max: 500 });
+    if (clean.no_telp !== undefined) updateData.no_telp = sanitizeOptionalText(clean.no_telp, { max: 30 });
+    if (clean.tema !== undefined) updateData.tema = sanitizeOptionalText(clean.tema, { max: 50 });
+    if (clean.warna_utama !== undefined) updateData.warna_utama = sanitizeOptionalText(clean.warna_utama, { max: 30 });
+    if (clean.info_rekening !== undefined) updateData.info_rekening = sanitizeOptionalText(clean.info_rekening, { max: 500 });
 
     const { data, error } = await supabaseAdmin
       .from('toko')

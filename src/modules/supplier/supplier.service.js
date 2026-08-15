@@ -1,18 +1,16 @@
 import { supabaseAdmin } from '../../config/database.js';
-
-function sanitize(input) {
-  if (typeof input !== 'string') return input;
-  return input.replace(/<[^>]*>/g, '').replace(/[{}<>$%]/g, '').trim();
-}
+import { sanitizePlainText } from '../../utils/sanitize.js';
 
 export const supplierService = {
-  async list(toko_id) {
+  async list(toko_id, pagination) {
     const { data, error } = await supabaseAdmin
       .from('supplier')
       .select('*')
       .eq('toko_id', toko_id)
       .eq('aktif', true)
       .order('nama', { ascending: true });
+
+    if (pagination) query = query.range(pagination.offset, pagination.end);
 
     if (error) throw new Error('Gagal mengambil daftar supplier');
     return data;
@@ -28,7 +26,7 @@ export const supplierService = {
     if (!clean.nama || !clean.nama.trim()) {
       throw new Error('Nama supplier wajib diisi');
     }
-    clean.nama = sanitize(clean.nama);
+    clean.nama = sanitizePlainText(clean.nama, { field: 'Nama supplier', max: 200 });
 
     // Cek duplikat nama
     const { data: existing } = await supabaseAdmin
@@ -69,6 +67,9 @@ export const supplierService = {
     delete clean.toko_id;
     delete clean.created_at;
     delete clean.updated_at;
+    if (clean.nama !== undefined) {
+      clean.nama = sanitizePlainText(clean.nama, { field: 'Nama supplier', max: 200 });
+    }
 
     const { data, error } = await supabaseAdmin
       .from('supplier')

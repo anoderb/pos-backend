@@ -4,7 +4,7 @@ import { responseSukses } from '../../utils/response.js';
 export const penggunaController = {
   // GET /api/pengguna
   async list(request, reply) {
-    const list = await penggunaService.listKasir(request.toko_id);
+    const list = await penggunaService.listKasir(request.toko_id, request.pagination);
     return reply.send(responseSukses(list, 'Daftar kasir toko'));
   },
 

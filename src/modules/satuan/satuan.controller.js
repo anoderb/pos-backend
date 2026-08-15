@@ -3,7 +3,7 @@ import { responseSukses } from '../../utils/response.js';
 
 export const satuanController = {
   async list(request, reply) {
-    const data = await satuanService.list(request.toko_id);
+    const data = await satuanService.list(request.toko_id, request.pagination);
     return reply.send(responseSukses(data, 'Daftar satuan toko'));
   },
 

@@ -3,7 +3,7 @@ import { responseSukses } from '../../utils/response.js';
 
 export const supplierController = {
   async list(request, reply) {
-    const data = await supplierService.list(request.toko_id);
+    const data = await supplierService.list(request.toko_id, request.pagination);
     return reply.send(responseSukses(data, 'Daftar supplier'));
   },
 

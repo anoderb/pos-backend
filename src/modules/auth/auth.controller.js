@@ -1,5 +1,26 @@
 import { authService } from './auth.service.js';
 import { responseSukses } from '../../utils/response.js';
+import { supabaseAdmin } from '../../config/database.js';
+import { revokeAccessToken } from '../../utils/revoked-tokens.js';
+
+const REFRESH_COOKIE = 'tokiva_refresh_token';
+const refreshCookieOptions = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === 'production',
+  sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+  path: '/api/auth',
+  maxAge: 7 * 24 * 60 * 60,
+};
+
+function publicSession(session) {
+  if (!session) return null;
+  return {
+    access_token: session.access_token,
+    expires_at: session.expires_at,
+    expires_in: session.expires_in,
+    token_type: session.token_type,
+  };
+}
 
 export const authController = {
   async register(request, reply) {
@@ -24,7 +45,8 @@ export const authController = {
 
     try {
       const hasil = await authService.login({ email, password });
-      return reply.send(responseSukses(hasil, 'Login berhasil'));
+      reply.setCookie(REFRESH_COOKIE, hasil.session?.refresh_token, refreshCookieOptions);
+      return reply.send(responseSukses({ ...hasil, session: publicSession(hasil.session) }, 'Login berhasil'));
     } catch (err) {
       return reply.code(400).send({ berhasil: false, pesan: err.message });
     }
@@ -57,14 +79,17 @@ export const authController = {
   },
 
   async resetPassword(request, reply) {
-    const { email, new_password } = request.body || {};
+    const { email, old_password, new_password } = request.body || {};
 
     // Mode 1: Ganti password langsung (user sudah login JWT)
     if (new_password) {
       if (!request.pengguna?.email) {
         return reply.code(401).send({ berhasil: false, pesan: 'Anda harus login untuk mengubah password' });
       }
-      const hasil = await authService.gantiPassword(request.pengguna.email, new_password);
+      if (!old_password) {
+        return reply.code(400).send({ berhasil: false, pesan: 'Password lama wajib diisi' });
+      }
+      const hasil = await authService.gantiPassword(request.pengguna.email, old_password, new_password);
       return reply.send(responseSukses(hasil, hasil.pesan));
     }
 
@@ -99,14 +124,15 @@ export const authController = {
   },
 
   async refresh(request, reply) {
-    const { refresh_token } = request.body || {};
+    const refresh_token = request.cookies?.[REFRESH_COOKIE];
     if (!refresh_token) {
-      return reply.code(400).send({ berhasil: false, pesan: 'refresh_token wajib diisi' });
+      return reply.code(401).send({ berhasil: false, pesan: 'Sesi refresh tidak ditemukan' });
     }
 
     try {
       const session = await authService.refreshToken(refresh_token);
-      return reply.send(responseSukses(session, 'Token berhasil diperbarui'));
+      reply.setCookie(REFRESH_COOKIE, session.refresh_token, refreshCookieOptions);
+      return reply.send(responseSukses(publicSession(session), 'Token berhasil diperbarui'));
     } catch (err) {
       return reply.code(401).send({ berhasil: false, pesan: err.message });
     }
@@ -122,12 +148,17 @@ export const authController = {
   },
 
   async logout(request, reply) {
-    try {
-      await supabaseAuth.auth.signOut();
-    } catch (e) {
-      console.error('Supabase signOut error:', e.message);
+    const authHeader = request.headers.authorization || '';
+    const accessToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
+    if (accessToken) {
+      // Deny the current JWT immediately, then revoke its refresh session upstream.
+      revokeAccessToken(accessToken);
+      const { error } = await supabaseAdmin.auth.admin.signOut(accessToken);
+      if (error && ![401, 404].includes(error.status)) {
+        return reply.code(502).send({ berhasil: false, pesan: 'Sesi belum dapat dicabut. Silakan coba lagi.' });
+      }
     }
-    reply.clearCookie?.('tokiva_token');
+    reply.clearCookie(REFRESH_COOKIE, { ...refreshCookieOptions, maxAge: undefined });
     return reply.send(responseSukses(null, 'Logout berhasil'));
   },
 };

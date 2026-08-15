@@ -4,7 +4,7 @@ import { responseSukses } from '../../utils/response.js';
 export const pelangganController = {
   async list(request, reply) {
     const { search } = request.query || {};
-    const data = await pelangganService.list(request.toko_id, search);
+    const data = await pelangganService.list(request.toko_id, search, request.pagination);
     return reply.send(responseSukses(data, 'Daftar pelanggan toko'));
   },
 

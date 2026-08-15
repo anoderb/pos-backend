@@ -114,12 +114,14 @@ export const notaMasukService = {
     return nota;
   },
 
-  async listNotaMasuk(toko_id) {
+  async listNotaMasuk(toko_id, pagination) {
     const { data, error } = await supabaseAdmin
       .from('nota_masuk')
       .select('*, supplier:supplier_id(nama)')
       .eq('toko_id', toko_id)
       .order('created_at', { ascending: false });
+
+    if (pagination) query = query.range(pagination.offset, pagination.end);
 
     if (error) throw new Error('Gagal mengambil daftar nota masuk');
     return data;
