@@ -3,13 +3,15 @@ import { sanitizePlainText } from '../../utils/sanitize.js';
 
 export const satuanService = {
   async list(toko_id, pagination) {
-    const { data, error } = await supabaseAdmin
+    let query = supabaseAdmin
       .from('satuan')
       .select('*')
       .eq('toko_id', toko_id)
       .order('nama', { ascending: true });
 
     if (pagination) query = query.range(pagination.offset, pagination.end);
+
+    const { data, error } = await query;
 
     if (error) throw new Error('Gagal mengambil daftar satuan');
     return data;

@@ -109,13 +109,15 @@ export const shiftService = {
 
   // List Semua Shift Toko (Owner)
   async listShift(toko_id, pagination) {
-    const { data, error } = await supabaseAdmin
+    let query = supabaseAdmin
       .from('shift')
       .select('*, kasir:kasir_id(nama)')
       .eq('toko_id', toko_id)
       .order('waktu_buka', { ascending: false });
 
     if (pagination) query = query.range(pagination.offset, pagination.end);
+
+    const { data, error } = await query;
 
     if (error) throw new Error('Gagal mengambil daftar shift');
     return data;

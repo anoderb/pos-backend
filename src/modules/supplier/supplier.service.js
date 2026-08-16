@@ -3,7 +3,7 @@ import { sanitizePlainText } from '../../utils/sanitize.js';
 
 export const supplierService = {
   async list(toko_id, pagination) {
-    const { data, error } = await supabaseAdmin
+    let query = supabaseAdmin
       .from('supplier')
       .select('*')
       .eq('toko_id', toko_id)
@@ -11,6 +11,8 @@ export const supplierService = {
       .order('nama', { ascending: true });
 
     if (pagination) query = query.range(pagination.offset, pagination.end);
+
+    const { data, error } = await query;
 
     if (error) throw new Error('Gagal mengambil daftar supplier');
     return data;

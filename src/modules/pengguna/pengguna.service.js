@@ -3,13 +3,15 @@ import { supabaseAdmin } from '../../config/database.js';
 export const penggunaService = {
   // List semua kasir di toko ini
   async listKasir(toko_id, pagination) {
-    const { data, error } = await supabaseAdmin
+    let query = supabaseAdmin
       .from('pengguna')
       .select('*')
       .eq('toko_id', toko_id)
       .order('created_at', { ascending: false });
 
     if (pagination) query = query.range(pagination.offset, pagination.end);
+
+    const { data, error } = await query;
 
     if (error) throw new Error('Gagal mengambil daftar pengguna');
     return data;
