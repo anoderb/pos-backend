@@ -31,6 +31,7 @@ export async function authRoutes(fastify, options) {
 
   // Public Routes (Rate limited anti-spam)
   fastify.post('/register', authRateLimitConfig, authController.register);
+  fastify.post('/verifikasi/email', forgotPasswordRateLimitConfig, authController.verifikasiEmail);
   fastify.post('/login', loginRateLimitConfig, authController.login);
   fastify.post('/oauth-sync', authController.oauthSync);
   fastify.post('/lupa-password', forgotPasswordRateLimitConfig, authController.lupaPassword);

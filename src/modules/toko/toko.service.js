@@ -54,6 +54,14 @@ export const tokoService = {
     if (clean.tema !== undefined) updateData.tema = sanitizeOptionalText(clean.tema, { max: 50 });
     if (clean.warna_utama !== undefined) updateData.warna_utama = sanitizeOptionalText(clean.warna_utama, { max: 30 });
     if (clean.info_rekening !== undefined) updateData.info_rekening = sanitizeOptionalText(clean.info_rekening, { max: 500 });
+    if (clean.catatan_footer !== undefined) updateData.catatan_footer = sanitizeOptionalText(clean.catatan_footer, { max: 500 });
+    if (clean.qris_mid !== undefined) updateData.qris_mid = sanitizeOptionalText(clean.qris_mid, { max: 100 });
+    if (clean.qris_merchant_name !== undefined) updateData.qris_merchant_name = sanitizeOptionalText(clean.qris_merchant_name, { max: 200 });
+    if (clean.bank_nama !== undefined) updateData.bank_nama = sanitizeOptionalText(clean.bank_nama, { max: 100 });
+    if (clean.bank_no_rekening !== undefined) updateData.bank_no_rekening = sanitizeOptionalText(clean.bank_no_rekening, { max: 50 });
+    if (clean.bank_atas_nama !== undefined) updateData.bank_atas_nama = sanitizeOptionalText(clean.bank_atas_nama, { max: 200 });
+    if (clean.qris_aktif !== undefined) updateData.qris_aktif = clean.qris_aktif === true || clean.qris_aktif === 'true';
+    if (clean.transfer_aktif !== undefined) updateData.transfer_aktif = clean.transfer_aktif === true || clean.transfer_aktif === 'true';
 
     const { data, error } = await supabaseAdmin
       .from('toko')

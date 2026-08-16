@@ -52,6 +52,16 @@ export const authController = {
     }
   },
 
+  async verifikasiEmail(request, reply) {
+    try {
+      const { email } = request.body || {};
+      const hasil = await authService.kirimVerifikasiEmail(email);
+      return reply.send(responseSukses(hasil, 'Email verifikasi dikirim'));
+    } catch (err) {
+      return reply.code(400).send({ berhasil: false, pesan: err.message });
+    }
+  },
+
   async oauthSync(request, reply) {
     const { user } = request.body || {};
     if (!user || !user.email) {

@@ -25,6 +25,7 @@ export async function ownerRoutes(fastify, options) {
   // --- Dashboard & Analytics ---
   fastify.get('/dashboard', ownerTag('Widget Dashboard Owner & Stok Kritis'), laporanController.dashboard);
   fastify.get('/laporan/penjualan', ownerTag('Laporan Penjualan Toko'), laporanController.penjualan);
+  fastify.get('/laporan/ringkasan', ownerTag('Ringkasan Laporan Keuangan'), laporanController.ringkasan);
   fastify.get('/laporan/penjualan/export', ownerTag('Export Data Penjualan (Excel/PDF)'), laporanController.exportPenjualan);
   fastify.get('/laporan/stok', ownerTag('Laporan Inventori & Nilai Stok'), laporanController.stok);
   fastify.get('/laporan/stok/export', ownerTag('Export Data Stok (Excel/PDF)'), laporanController.exportStok);

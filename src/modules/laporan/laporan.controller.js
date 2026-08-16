@@ -3,8 +3,15 @@ import { responseSukses } from '../../utils/response.js';
 
 export const laporanController = {
   async dashboard(request, reply) {
-    const data = await laporanService.getDashboardWidget(request.toko_id);
+    const { periode } = request.query || {};
+    const data = await laporanService.getDashboardWidget(request.toko_id, periode);
     return reply.send(responseSukses(data, 'Widget dashboard owner'));
+  },
+
+  async ringkasan(request, reply) {
+    const { rentang } = request.query || {};
+    const data = await laporanService.getRingkasanLaporan(request.toko_id, rentang);
+    return reply.send(responseSukses(data, 'Ringkasan laporan keuangan'));
   },
 
   async penjualan(request, reply) {

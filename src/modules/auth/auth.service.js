@@ -243,12 +243,59 @@ export const authService = {
     };
   },
 
+  // Kirim Email Verifikasi (desain template Tokiva)
+  async kirimVerifikasiEmail(email) {
+    if (!email || !EMAIL_REGEX.test(email)) {
+      throw new Error('Format email tidak valid');
+    }
+    const { data: profil } = await supabaseAdmin
+      .from('pengguna')
+      .select('nama')
+      .eq('email', email)
+      .maybeSingle();
+    const nama = profil?.nama || email.split('@')[0];
+
+    await kirimEmail({
+      to: email,
+      subject: 'Verifikasi Email Anda — Tokiva',
+      html: `
+        <div style="font-family: Arial, sans-serif; background: #F1F5F4; padding: 24px;">
+          <div style="max-width: 520px; margin: 0 auto; background: #ffffff; border-radius: 20px; overflow: hidden; box-shadow: 0 2px 12px rgba(16,35,62,.08);">
+            <div style="background: linear-gradient(135deg, #E8FAF0, #FFF8D9); padding: 28px 24px; text-align: center;">
+              <img src="https://tokiva.biz.id/assets/tokiva-dashboard/img-verifikasi-hero.png" alt="Verifikasi" style="width: 160px; height: auto; border-radius: 12px;" />
+              <h1 style="color: #10233E; font-size: 22px; margin: 16px 0 4px;">Verifikasi Email Anda!</h1>
+              <p style="color: #0CAF60; font-size: 14px; margin: 0; font-weight: 600;">Satu langkah lagi untuk memulai</p>
+            </div>
+            <div style="padding: 24px;">
+              <p style="color: #10233E; font-size: 14px; margin: 0 0 16px;">Halo <b>${nama}</b>! 👋</p>
+              <p style="color: #68758A; font-size: 14px; line-height: 1.6; margin: 0 0 24px;">
+                Terima kasih telah mendaftar di Tokiva. Klik tombol di bawah untuk membuka aplikasi dan mulai mengelola toko Anda.
+              </p>
+              <div style="text-align: center; margin-bottom: 24px;">
+                <a href="https://app.tokiva.biz.id/verifikasi?email=${encodeURIComponent(email)}" style="display: inline-block; background: #0CAF60; color: #ffffff; text-decoration: none; font-weight: 600; font-size: 15px; padding: 13px 32px; border-radius: 12px;">Verifikasi Email Saya</a>
+              </div>
+              <div style="background: #E8FAF0; border-radius: 12px; padding: 12px 16px; margin-bottom: 20px;">
+                <p style="margin: 0; color: #68758A; font-size: 12px;"><b style="color: #10233E;">Belum menerima email?</b> Cek folder Spam / Promosi Anda. Email bisa memerlukan waktu beberapa menit.</p>
+              </div>
+              <p style="color: #68758A; font-size: 12px; margin: 0;">Abaikan email ini jika Anda tidak mendaftar di Tokiva.</p>
+            </div>
+            <div style="background: #10233E; padding: 14px 24px; text-align: center;">
+              <p style="color: #ffffff; font-size: 12px; margin: 0;">© 2026 Tokiva. Semua hak dilindungi.</p>
+            </div>
+          </div>
+        </div>
+      `,
+    });
+
+    return { pesan: 'Email verifikasi telah dikirim ulang.' };
+  },
+
   // 4. Lupa Password — Kirim reset via Supabase
   async lupaPassword(email) {
     if (!email || !EMAIL_REGEX.test(email)) throw new Error('Format email tidak valid');
 
     const { error } = await supabaseAuth.auth.resetPasswordForEmail(email, {
-      redirectTo: 'https://tokiva.biz.id/reset-password',
+      redirectTo: 'https://app.tokiva.biz.id/reset-password',
     });
 
     if (error) {
@@ -265,7 +312,7 @@ export const authService = {
     }
 
     const { error } = await supabaseAuth.auth.resetPasswordForEmail(email, {
-      redirectTo: 'https://tokiva.biz.id/reset-password',
+      redirectTo: 'https://app.tokiva.biz.id/reset-password',
     });
 
     if (error) {
