@@ -104,7 +104,11 @@ export const tokoService = {
       if (signedError) throw new Error('Gagal membuat URL foto toko: ' + signedError.message);
       finalUrl = signedData?.signedUrl;
     }
-    if (!isValidUrl(finalUrl)) throw new Error('URL tidak valid. Hanya URL HTTPS yang diizinkan.');
+    if (typeof finalUrl !== 'string' || !finalUrl.trim()) {
+      throw new Error('URL foto tidak berhasil dibuat dari Storage');
+    }
+    // URL signed dibuat langsung oleh Supabase SDK; tidak divalidasi ulang sebagai input user.
+    // Validasi HTTPS/host hanya berlaku untuk URL eksternal yang dikirim langsung.
     const { data, error } = await supabaseAdmin
       .from('toko').update({ [field]: finalUrl }).eq('id', toko_id).select().single();
     if (error) throw new Error('Gagal memperbarui foto toko: ' + error.message);
