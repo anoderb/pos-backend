@@ -23,6 +23,18 @@ export const tokoService = {
       .single();
 
     if (error) throw new Error('Data toko tidak ditemukan');
+
+    // Bucket toko-logos private: expose fresh signed URL for FE/navbar.
+    if (data.logo_url && data.logo_url.includes('/storage/v1/object/')) {
+      const marker = '/storage/v1/object/';
+      const rawPath = data.logo_url.split(marker)[1]?.replace(/^sign\//, '').replace(/^public\//, '');
+      const bucketPrefix = 'toko-logos/';
+      const filePath = rawPath?.includes(bucketPrefix) ? rawPath.split(bucketPrefix)[1].split('?')[0] : null;
+      if (filePath) {
+        const { data: signed } = await supabaseAdmin.storage.from('toko-logos').createSignedUrl(filePath, 3600);
+        if (signed?.signedUrl) data.logo_url = signed.signedUrl;
+      }
+    }
     return data;
   },
 
