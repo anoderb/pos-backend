@@ -9,12 +9,8 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout via SSH
-        uses: actions/checkout@v4
-        with:
-          ssh-key: ${{ secrets.VPS_SSH_KEY }}
-          persist-credentials: false
-
+      # Tidak checkout via SSH dari runner.
+      # VPS sudah memiliki deploy key read-only untuk git pull private repo.
       - name: Deploy to VPS
         uses: appleboy/ssh-action@v1.0.3
         with:
