@@ -23,6 +23,18 @@ export const tokoService = {
       .single();
 
     if (error) throw new Error('Data toko tidak ditemukan');
+
+    // Bucket toko-logos private: expose fresh signed URL for FE/navbar.
+    if (data.logo_url && data.logo_url.includes('/storage/v1/object/')) {
+      const marker = '/storage/v1/object/';
+      const rawPath = data.logo_url.split(marker)[1]?.replace(/^sign\//, '').replace(/^public\//, '');
+      const bucketPrefix = 'toko-logos/';
+      const filePath = rawPath?.includes(bucketPrefix) ? rawPath.split(bucketPrefix)[1].split('?')[0] : null;
+      if (filePath) {
+        const { data: signed } = await supabaseAdmin.storage.from('toko-logos').createSignedUrl(filePath, 3600);
+        if (signed?.signedUrl) data.logo_url = signed.signedUrl;
+      }
+    }
     return data;
   },
 
@@ -74,19 +86,28 @@ export const tokoService = {
     return data;
   },
 
-  // Update URL logo / QRIS toko
+  // Update URL/media toko. Data URL diunggah ke Supabase Storage.
   async updateMediaToko(toko_id, field, media_url) {
-    if (!isValidUrl(media_url)) {
-      throw new Error('URL tidak valid. Hanya URL HTTPS yang diizinkan.');
+    let finalUrl = media_url;
+    if (typeof media_url === 'string' && media_url.startsWith('data:image/')) {
+      const match = media_url.match(/^data:(image\/[\w.+-]+);base64,(.+)$/);
+      if (!match) throw new Error('Format foto tidak valid');
+      const [, contentType, encoded] = match;
+      const ext = contentType.split('/')[1].replace('jpeg', 'jpg');
+      const fileName = `toko-${toko_id}/${field}-${Date.now()}.${ext}`;
+      const { error: uploadError } = await supabaseAdmin.storage
+        .from('toko-logos')
+        .upload(fileName, Buffer.from(encoded, 'base64'), { contentType, upsert: true });
+      if (uploadError) throw new Error('Gagal upload foto toko: ' + uploadError.message);
+      const { data: signedData, error: signedError } = await supabaseAdmin.storage
+        .from('toko-logos').createSignedUrl(fileName, 60 * 60 * 24 * 365);
+      if (signedError) throw new Error('Gagal membuat URL foto toko: ' + signedError.message);
+      finalUrl = signedData?.signedUrl;
     }
+    if (!isValidUrl(finalUrl)) throw new Error('URL tidak valid. Hanya URL HTTPS yang diizinkan.');
     const { data, error } = await supabaseAdmin
-      .from('toko')
-      .update({ [field]: media_url })
-      .eq('id', toko_id)
-      .select()
-      .single();
-
-    if (error) throw new Error('Gagal memperbarui foto toko');
+      .from('toko').update({ [field]: finalUrl }).eq('id', toko_id).select().single();
+    if (error) throw new Error('Gagal memperbarui foto toko: ' + error.message);
     return data;
   },
 };
