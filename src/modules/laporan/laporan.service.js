@@ -1,9 +1,8 @@
 import { supabaseAdmin } from '../../config/database.js';
 
 export const laporanService = {
-  // Widget Dashboard Owner — periode: hari_ini | minggu_ini | bulan_ini (default hari_ini)
-  async getDashboardWidget(toko_id, periode = 'hari_ini') {
-    const p = ['hari_ini', 'minggu_ini', 'bulan_ini'].includes(periode) ? periode : 'hari_ini';
+  // Widget Dashboard Owner — periode: hari_ini | minggu_ini | bulan_ini | custom (tanggal_mulai/tanggal_selesai)
+  async getDashboardWidget(toko_id, periode = 'hari_ini', tanggal_mulai, tanggal_selesai) {
     const O = 7 * 3600 * 1000; // offset GMT+7
     const now = Date.now();
     const local = new Date(now + O);
@@ -12,7 +11,21 @@ export const laporanService = {
     const d = local.getUTCDate();
 
     let mulaiLocal, selesaiLocal;
-    if (p === 'hari_ini') {
+    let p = ['hari_ini', 'minggu_ini', 'bulan_ini'].includes(periode) ? periode : 'hari_ini';
+    let isCustom = false;
+
+    if (tanggal_mulai && tanggal_selesai) {
+      isCustom = true;
+      p = 'custom';
+      const parse = (s) => {
+        const [yy, mm, dd] = String(s).slice(0, 10).split('-').map(Number);
+        return new Date(Date.UTC(yy, (mm || 1) - 1, dd || 1));
+      };
+      mulaiLocal = parse(tanggal_mulai);
+      // selesai inclusive → end of day
+      selesaiLocal = new Date(parse(tanggal_selesai).getTime() + 24 * 3600 * 1000);
+      if (selesaiLocal <= mulaiLocal) selesaiLocal = new Date(mulaiLocal.getTime() + 24 * 3600 * 1000);
+    } else if (p === 'hari_ini') {
       mulaiLocal = new Date(Date.UTC(y, m, d));
       selesaiLocal = new Date(Date.UTC(y, m, d + 1));
     } else if (p === 'minggu_ini') {
@@ -56,7 +69,18 @@ export const laporanService = {
 
     // --- Bucket chart (dipakai chart omset + chart transaksi sekaligus) ---
     const buckets = [];
-    if (p === 'hari_ini') {
+    if (isCustom) {
+      // per-hari dalam rentang
+      const tglAwal = new Date(mulaiLocal.getTime());
+      const tglAkhir = new Date(selesaiLocal.getTime() - 24 * 3600 * 1000);
+      let cur = new Date(tglAwal.getTime());
+      let idx = 1;
+      while (cur.getTime() <= tglAkhir.getTime() && idx <= 62) {
+        buckets.push({ idx, label: cur.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }) });
+        cur = new Date(cur.getTime() + 24 * 3600 * 1000);
+        idx++;
+      }
+    } else if (p === 'hari_ini') {
       for (let h = 0; h < 24; h++) buckets.push({ idx: h, label: `${String(h).padStart(2, '0')}:00` });
     } else if (p === 'minggu_ini') {
       const days = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'];
@@ -70,6 +94,7 @@ export const laporanService = {
     const chart_transaksi = buckets.map(() => 0);
     const bucketIndexOf = (createdAt) => {
       const l = new Date(new Date(createdAt).getTime() + O);
+      if (isCustom) return Math.floor((new Date(Date.UTC(l.getUTCFullYear(), l.getUTCMonth(), l.getUTCDate())).getTime() - new Date(Date.UTC(mulaiLocal.getUTCFullYear(), mulaiLocal.getUTCMonth(), mulaiLocal.getUTCDate())).getTime()) / (24 * 3600 * 1000)) + 1;
       if (p === 'hari_ini') return l.getUTCHours();
       if (p === 'minggu_ini') return (l.getUTCDay() + 6) % 7;
       return l.getUTCDate();
@@ -132,7 +157,7 @@ export const laporanService = {
       .maybeSingle();
 
     // --- Insight ---
-    const prevLabel = p === 'hari_ini' ? 'kemarin' : p === 'minggu_ini' ? 'minggu lalu' : 'bulan lalu';
+    const prevLabel = isCustom ? 'periode sebelumnya' : p === 'hari_ini' ? 'kemarin' : p === 'minggu_ini' ? 'minggu lalu' : 'bulan lalu';
     let insight = { arah: 'stable', persen: null, teks: `Penjualan periode ini relatif stabil dibanding ${prevLabel}.` };
     if (growth_persen !== null) {
       if (growth_persen > 0) insight = { arah: 'up', persen: growth_persen, teks: `Penjualan periode ini lebih tinggi ${growth_persen}% dibanding ${prevLabel}.` };
@@ -141,6 +166,7 @@ export const laporanService = {
 
     return {
       periode: p,
+      custom: isCustom,
       rentang: { mulai: mulai.toISOString(), selesai: selesai.toISOString() },
       omzet,
       omzet_prev,

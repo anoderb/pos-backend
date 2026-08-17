@@ -3,8 +3,8 @@ import { responseSukses } from '../../utils/response.js';
 
 export const laporanController = {
   async dashboard(request, reply) {
-    const { periode } = request.query || {};
-    const data = await laporanService.getDashboardWidget(request.toko_id, periode);
+    const { periode, tanggal_mulai, tanggal_selesai } = request.query || {};
+    const data = await laporanService.getDashboardWidget(request.toko_id, periode, tanggal_mulai, tanggal_selesai);
     return reply.send(responseSukses(data, 'Widget dashboard owner'));
   },
 
