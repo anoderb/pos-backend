@@ -4,12 +4,22 @@ import { supabaseAdmin } from '../../config/database.js';
 import { revokeAccessToken } from '../../utils/revoked-tokens.js';
 
 const REFRESH_COOKIE = 'tokiva_refresh_token';
-const refreshCookieOptions = {
+const ACCESS_COOKIE = 'tokiva_access_token';
+const cookieBase = {
   httpOnly: true,
   secure: process.env.NODE_ENV === 'production',
+  sameSite: 'lax',
+  path: '/',
+};
+const refreshCookieOptions = {
+  ...cookieBase,
   sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
   path: '/api/auth',
   maxAge: 7 * 24 * 60 * 60,
+};
+const accessCookieOptions = {
+  ...cookieBase,
+  maxAge: 3600,
 };
 
 function publicSession(session) {
@@ -46,6 +56,7 @@ export const authController = {
     try {
       const hasil = await authService.login({ email, password });
       reply.setCookie(REFRESH_COOKIE, hasil.session?.refresh_token, refreshCookieOptions);
+      reply.setCookie(ACCESS_COOKIE, hasil.session?.access_token, accessCookieOptions);
       return reply.send(responseSukses({ ...hasil, session: publicSession(hasil.session) }, 'Login berhasil'));
     } catch (err) {
       return reply.code(400).send({ berhasil: false, pesan: err.message });
@@ -142,6 +153,7 @@ export const authController = {
     try {
       const session = await authService.refreshToken(refresh_token);
       reply.setCookie(REFRESH_COOKIE, session.refresh_token, refreshCookieOptions);
+      reply.setCookie(ACCESS_COOKIE, session.access_token, accessCookieOptions);
       return reply.send(responseSukses(publicSession(session), 'Token berhasil diperbarui'));
     } catch (err) {
       return reply.code(401).send({ berhasil: false, pesan: err.message });
@@ -169,6 +181,7 @@ export const authController = {
       }
     }
     reply.clearCookie(REFRESH_COOKIE, { ...refreshCookieOptions, maxAge: undefined });
+    reply.clearCookie(ACCESS_COOKIE, { ...accessCookieOptions, maxAge: 0 });
     return reply.send(responseSukses(null, 'Logout berhasil'));
   },
 };

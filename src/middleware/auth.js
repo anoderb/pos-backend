@@ -7,14 +7,16 @@ import { validateUuidParams } from '../utils/validation.js';
 export async function authenticate(request, reply) {
   try {
     const authHeader = request.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    const cookieToken = request.cookies?.tokiva_access_token;
+    const token = authHeader?.startsWith('Bearer ') ? authHeader.split(' ')[1] : cookieToken;
+
+    if (!token) {
       return reply.code(401).send({
         berhasil: false,
         pesan: 'Akses ditolak: Token JWT tidak ditemukan',
       });
     }
 
-    const token = authHeader.split(' ')[1];
     if (isAccessTokenRevoked(token)) {
       return reply.code(401).send({
         berhasil: false,
