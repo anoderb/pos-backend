@@ -9,7 +9,6 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      # Tidak checkout via SSH dari runner.
       # VPS sudah memiliki deploy key read-only untuk git pull private repo.
       - name: Deploy to VPS
         uses: appleboy/ssh-action@v1.0.3
@@ -18,11 +17,25 @@ jobs:
           username: ubuntu
           key: ${{ secrets.VPS_SSH_KEY }}
           port: 22
+          timeout: 30s
+          command_timeout: 10m
+          script_stop: true
           script: |
+            set -eu
             cd /home/ubuntu/pos-backend
-            git pull --ff-only
+            git fetch origin main
+            git merge --ff-only origin/main
             export PATH=/home/ubuntu/.hermes/node/bin:$PATH
             npm install --omit=dev
             sudo systemctl restart tokiva-backend
-            sleep 5
-            curl -s -o /dev/null -w "health:%{http_code}\n" http://localhost:5000/health
+            for i in 1 2 3 4 5 6; do
+              code=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:5000/health || true)
+              if [ "$code" = "200" ]; then
+                echo "health:$code"
+                exit 0
+              fi
+              sleep 2
+            done
+            sudo systemctl status tokiva-backend --no-pager
+            echo "health:$code"
+            exit 1
