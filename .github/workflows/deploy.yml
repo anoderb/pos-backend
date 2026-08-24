@@ -27,7 +27,11 @@ jobs:
             git merge --ff-only origin/main
             export PATH=/home/ubuntu/.hermes/node/bin:$PATH
             npm install --omit=dev
-            sudo systemctl restart tokiva-backend
+            sudo systemctl stop tokiva-backend || true
+            sleep 1
+            sudo fuser -k 5000/tcp || true
+            sleep 2
+            sudo systemctl start tokiva-backend
             for i in 1 2 3 4 5 6; do
               code=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:5000/health || true)
               if [ "$code" = "200" ]; then
