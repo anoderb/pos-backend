@@ -2,20 +2,23 @@ import jwt from 'jsonwebtoken';
 import { supabaseAdmin } from '../../config/database.js';
 
 const JWT_SECRET = process.env.JWT_SECRET;
-if (!JWT_SECRET) throw new Error('FATAL: JWT_SECRET wajib dikonfigurasi di .env');
+if (!JWT_SECRET) throw new Error('FATAL: JWT_SECRET wajib di .env');
+
+const ADMIN_COOKIE = 'tokiva_admin_token';
 
 // Middleware Authenticate Pengguna Admin
 export async function authenticateAdmin(request, reply) {
   try {
     const authHeader = request.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    const cookieToken = request.cookies?.[ADMIN_COOKIE];
+    const token = authHeader?.startsWith('Bearer ') ? authHeader.split(' ')[1] : cookieToken;
+
+    if (!token) {
       return reply.code(401).send({
         berhasil: false,
         pesan: 'Akses ditolak: Token JWT Admin tidak ditemukan',
       });
     }
-
-    const token = authHeader.split(' ')[1];
 
     // Verify JWT payload
     let decoded;
@@ -35,10 +38,10 @@ export async function authenticateAdmin(request, reply) {
       });
     }
 
-    // Fetch Admin record from pengguna_admin table
+    // Fetch Admin — whitelist kolom aman, tanpa password_hash
     const { data: admin, error } = await supabaseAdmin
       .from('pengguna_admin')
-      .select('*')
+      .select('id, nama, email, role, aktif')
       .eq('id', decoded.id)
       .single();
 
@@ -60,7 +63,7 @@ export async function authenticateAdmin(request, reply) {
   } catch (err) {
     return reply.code(401).send({
       berhasil: false,
-      pesan: 'Admin Auth Error: ' + err.message,
+      pesan: 'Authentication Error',
     });
   }
 }

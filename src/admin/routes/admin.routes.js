@@ -18,6 +18,7 @@ export async function adminRoutes(fastify, options) {
 
   // Public Admin Routes (Prefix '/api/admin' is injected by index.js)
   fastify.post('/auth/login', adminTag('Login Super Admin Panel'), adminAuthController.login);
+  fastify.post('/auth/logout', adminTag('Logout Admin'), adminAuthController.logout);
   fastify.get('/dataset/image-proxy', adminTag('Proxy Stream Foto Private HuggingFace Hub'), adminDatasetController.proxyImage);
 
   // Protected Admin Routes (Requires tokiva_admin_token JWT)

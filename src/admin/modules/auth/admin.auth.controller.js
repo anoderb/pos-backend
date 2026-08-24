@@ -1,8 +1,19 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { supabaseAdmin } from '../../../config/database.js';
+import { serializeAdmin } from '../../../utils/serializers.js';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'tokiva-super-secret-jwt-key-change-this-in-production-2026';
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) throw new Error('FATAL: JWT_SECRET wajib di .env');
+
+const ADMIN_COOKIE = 'tokiva_admin_token';
+const adminCookieOptions = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === 'production',
+  sameSite: 'lax',
+  path: '/',
+  maxAge: 7 * 24 * 60 * 60,
+};
 
 export const adminAuthController = {
   // POST /api/admin/auth/login
@@ -17,10 +28,10 @@ export const adminAuthController = {
         });
       }
 
-      // 1. Fetch admin from pengguna_admin table
+      // 1. Fetch admin — whitelist kolom, password_hash diambil terpisah hanya untuk compare
       const { data: admin, error } = await supabaseAdmin
         .from('pengguna_admin')
-        .select('*')
+        .select('id, nama, email, role, aktif, password_hash')
         .eq('email', email.trim().toLowerCase())
         .single();
 
@@ -51,7 +62,7 @@ export const adminAuthController = {
         });
       }
 
-      // 3. Generate Admin JWT Token
+      // 3. Generate Admin JWT Token — pindah ke HttpOnly cookie
       const token = jwt.sign(
         {
           id: admin.id,
@@ -62,6 +73,7 @@ export const adminAuthController = {
         JWT_SECRET,
         { expiresIn: '7d' }
       );
+      reply.setCookie(ADMIN_COOKIE, token, adminCookieOptions);
 
       // Log activity
       try {
@@ -74,23 +86,18 @@ export const adminAuthController = {
         console.error('Gagal mencatat log login admin:', logErr.message);
       }
 
+      // Response tidak mengirim token — hanya profil aman
       return reply.send({
         berhasil: true,
         pesan: 'Login Admin Berhasil',
         data: {
-          token,
-          admin: {
-            id: admin.id,
-            nama: admin.nama,
-            email: admin.email,
-            role: admin.role,
-          },
+          admin: serializeAdmin(admin),
         },
       });
     } catch (err) {
       return reply.code(500).send({
         berhasil: false,
-        pesan: 'Gagal Login Admin: ' + err.message,
+        pesan: 'Gagal Login Admin',
       });
     }
   },
@@ -100,7 +107,7 @@ export const adminAuthController = {
     return reply.send({
       berhasil: true,
       pesan: 'Data Profil Admin',
-      data: request.admin,
+      data: serializeAdmin(request.admin),
     });
   },
 
@@ -145,8 +152,17 @@ export const adminAuthController = {
     } catch (err) {
       return reply.code(500).send({
         berhasil: false,
-        pesan: 'Gagal ganti password: ' + err.message,
+        pesan: 'Gagal ganti password',
       });
     }
+  },
+
+  // POST /api/admin/auth/logout
+  async logout(request, reply) {
+    reply.clearCookie(ADMIN_COOKIE, { ...adminCookieOptions, maxAge: 0 });
+    return reply.send({
+      berhasil: true,
+      pesan: 'Logout Admin berhasil',
+    });
   },
 };

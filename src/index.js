@@ -130,17 +130,24 @@ fastify.addHook('onSend', (request, reply, payload, done) => {
   done();
 });
 
-// Centralized Error Handler (SEC-10)
+// Centralized Error Handler (SEC-10) — jangan bocor detail error ke client
 fastify.setErrorHandler((error, request, reply) => {
   const rawMessage = String(error.message || '');
   const isValidationError = Boolean(error.validation)
     || /wajib|tidak valid|tidak boleh|maksimal|minimal|harus berupa|sudah terdaftar|tidak mencukupi/i.test(rawMessage);
   const isNotFoundError = /tidak ditemukan|not found/i.test(rawMessage);
   const statusCode = error.statusCode || (isValidationError ? 400 : isNotFoundError ? 404 : 500);
+
+  // Production: 500 = pesan generik, detail error hanya di log server
   const isDev = process.env.NODE_ENV !== 'production';
   const message = (isDev || statusCode !== 500)
     ? error.message
     : 'Terjadi kesalahan internal pada server';
+
+  // Log error ke server (gak dikirim ke client)
+  if (statusCode === 500) {
+    request.log.error({ err: error }, 'Internal server error');
+  }
 
   reply.status(statusCode).send({
     berhasil: false,

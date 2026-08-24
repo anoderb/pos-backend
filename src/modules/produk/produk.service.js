@@ -1,4 +1,5 @@
 import { supabaseAdmin } from '../../config/database.js';
+import { serializeProduk } from '../../utils/serializers.js';
 import { sanitizePlainText } from '../../utils/sanitize.js';
 
 async function assertProductTenant(toko_id, produk_id) {
@@ -11,7 +12,12 @@ export const produkService = {
   async listProduk(toko_id, { kategori_id, stok_kritis, aktif_ai, search, pagination } = {}) {
     let query = supabaseAdmin
       .from('produk')
-      .select('*, kategori:kategori_id(nama), satuan_dasar:satuan_dasar_id(nama), produk_satuan_jual(*)')
+      .select(`
+        id, nama, barcode, kategori_id, stok, stok_minimum,
+        foto_url, aktif, aktif_ai, hpp,
+        kategori:kategori_id(nama),
+        produk_satuan_jual(id, satuan_id, konversi, harga_ecer, harga_grosir, min_qty_grosir, barcode, is_default)
+      `)
       .eq('toko_id', toko_id)
       .eq('aktif', true)
       .order('nama', { ascending: true });
@@ -32,14 +38,14 @@ export const produkService = {
         || {};
 
       const ecerPrice = Number(defaultSj.harga_ecer || 0);
-      return {
+      return serializeProduk({
         ...p,
         harga_jual_default: ecerPrice,
         harga_ecer: ecerPrice,
         harga_grosir: Number(defaultSj.harga_grosir || 0),
         min_qty_grosir: Number(defaultSj.min_qty_grosir || 5),
         satuan_jual: sjList,
-      };
+      });
     });
 
     if (stok_kritis === 'true' || stok_kritis === true) {
