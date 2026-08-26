@@ -14,8 +14,9 @@ export const produkService = {
       .from('produk')
       .select(`
         id, nama, barcode, kategori_id, stok, stok_minimum,
-        foto_url, aktif, aktif_ai, hpp,
+        foto_url, aktif, aktif_ai,
         kategori:kategori_id(nama),
+        satuan_dasar:satuan_dasar_id(nama),
         produk_satuan_jual(id, satuan_id, konversi, harga_ecer, harga_grosir, min_qty_grosir, barcode, is_default)
       `)
       .eq('toko_id', toko_id)

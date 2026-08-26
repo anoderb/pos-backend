@@ -336,6 +336,48 @@ export const laporanService = {
     return data;
   },
 
+  // Riwayat Transaksi (untuk halaman POS/Kasir) — semua transaksi, pagination 10 per halaman
+  async getRiwayatTransaksi(toko_id, { page = 1, pageSize = 10 } = {}) {
+    const halaman = Math.max(1, Number(page) || 1);
+    const ukuran = Math.min(50, Math.max(1, Number(pageSize) || 10));
+    const from = (halaman - 1) * ukuran;
+    const to = from + ukuran - 1;
+
+    const { count, error: countError } = await supabaseAdmin
+      .from('transaksi')
+      .select('id', { count: 'exact', head: true })
+      .eq('toko_id', toko_id)
+      .eq('status', 'selesai');
+    if (countError) throw new Error('Gagal menghitung riwayat transaksi');
+
+    const { data, error } = await supabaseAdmin
+      .from('transaksi')
+      .select('id, nomor_transaksi, total, diskon_total, metode_bayar, created_at, kasir:kasir_id(nama), pelanggan:pelanggan_id(nama)')
+      .eq('toko_id', toko_id)
+      .eq('status', 'selesai')
+      .order('created_at', { ascending: false })
+      .range(from, to);
+
+    if (error) throw new Error('Gagal mengambil riwayat transaksi');
+    const items = (data || []).map((t) => ({
+      id: t.id,
+      nomor_transaksi: t.nomor_transaksi,
+      total: Number(t.total || 0),
+      diskon_total: Math.abs(Number(t.diskon_total || 0)),
+      metode_bayar: t.metode_bayar,
+      created_at: t.created_at,
+      kasir: t.kasir?.nama || null,
+      pelanggan: t.pelanggan?.nama || null,
+    }));
+    return {
+      data: items,
+      total: count || 0,
+      page: halaman,
+      pageSize: ukuran,
+      totalPages: Math.max(1, Math.ceil((count || 0) / ukuran)),
+    };
+  },
+
   // Laporan Histori Stok
   async getLaporanStok(toko_id) {
     const { data, error } = await supabaseAdmin

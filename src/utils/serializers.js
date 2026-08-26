@@ -54,6 +54,8 @@ export function serializeProduk(p = {}, { includeHpp = false } = {}) {
     harga_ecer: p.harga_ecer,
     harga_grosir: p.harga_grosir,
     min_qty_grosir: p.min_qty_grosir,
+    kategori: p.kategori ?? null,
+    satuan_dasar: p.satuan_dasar ?? null,
     satuan_jual: Array.isArray(p.satuan_jual) ? p.satuan_jual : [],
   };
   if (includeHpp) base.hpp = p.hpp;

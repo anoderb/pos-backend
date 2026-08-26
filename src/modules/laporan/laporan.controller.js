@@ -24,6 +24,16 @@ export const laporanController = {
     return reply.send(responseSukses(data, 'Laporan penjualan'));
   },
 
+  async riwayat(request, reply) {
+    const { rentang, page, pageSize, page_size } = request.query || {};
+    // Anggota keluarga lama (rentang) diabaikan: riwayat kini semua transaksi + pagination.
+    const data = await laporanService.getRiwayatTransaksi(request.toko_id, {
+      page: page || 1,
+      pageSize: pageSize || page_size || 10,
+    });
+    return reply.send(responseSukses(data, 'Riwayat transaksi'));
+  },
+
   async stok(request, reply) {
     const data = await laporanService.getLaporanStok(request.toko_id);
     return reply.send(responseSukses(data, 'Laporan stok produk'));
