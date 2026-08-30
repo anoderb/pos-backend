@@ -13,27 +13,34 @@ export const transaksiController = {
       });
     }
 
-    let finalShiftId = request.body.shift_id;
-    if (!finalShiftId) {
-      const { data: activeShift } = await supabaseAdmin
-        .from('shift')
-        .select('id')
-        .eq('toko_id', request.toko_id)
-        .eq('kasir_id', request.pengguna.id)
-        .eq('status', 'buka')
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
+    // Shift ditentukan dan divalidasi server-side. Client tidak boleh memilih
+    // shift milik sesi/kasir lain atau memakai shift yang sudah ditutup.
+    const { data: activeShift, error: shiftError } = await supabaseAdmin
+      .from('shift')
+      .select('id')
+      .eq('toko_id', request.toko_id)
+      .eq('kasir_id', request.pengguna.id)
+      .eq('status', 'buka')
+      .order('waktu_buka', { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
-      if (activeShift?.id) {
-        finalShiftId = activeShift.id;
-      } else {
-        return reply.code(400).send({
-          berhasil: false,
-          pesan: 'Tidak ada shift aktif. Silakan buka shift terlebih dahulu.',
-        });
-      }
+    if (shiftError || !activeShift?.id) {
+      return reply.code(400).send({
+        berhasil: false,
+        pesan: 'Tidak ada shift aktif. Silakan buka atau lanjutkan shift terlebih dahulu.',
+      });
     }
+
+    const requestedShiftId = request.body.shift_id;
+    if (requestedShiftId && requestedShiftId !== activeShift.id) {
+      return reply.code(409).send({
+        berhasil: false,
+        pesan: 'Shift transaksi sudah berubah. Silakan muat ulang halaman POS.',
+      });
+    }
+
+    const finalShiftId = activeShift.id;
 
     const calculatedSubtotal = subtotal || items.reduce((s, i) => s + (Number(i.subtotal) || Number(i.harga_satuan) * Number(i.qty) || 0), 0);
     const calculatedTotal = total || Math.max(0, calculatedSubtotal - (Number(request.body.diskon_total) || 0));

@@ -1,15 +1,42 @@
 import { supabaseAdmin } from '../../config/database.js';
 
+function summarizeTransactions(txList = []) {
+  return txList.reduce((summary, tx) => {
+    const total = Number(tx.total) || 0;
+
+    summary.total_transaksi += 1;
+    if (tx.status === 'void') {
+      summary.total_void += total;
+      return summary;
+    }
+
+    summary.total_penjualan += total;
+    if (tx.metode_bayar === 'cash') summary.total_cash += total;
+    if (tx.metode_bayar === 'qris') summary.total_qris += total;
+    if (tx.metode_bayar === 'transfer') summary.total_transfer += total;
+    return summary;
+  }, {
+    total_transaksi: 0,
+    total_penjualan: 0,
+    total_void: 0,
+    total_cash: 0,
+    total_qris: 0,
+    total_transfer: 0,
+  });
+}
+
 export const shiftService = {
   // Buka Shift Baru
   async bukaShift(toko_id, kasir_id, { modal_awal }) {
-    // Cek apakah kasir sedang memiliki shift yang buka
+    // Satu kasir hanya boleh punya satu shift aktif, termasuk saat jeda.
     const { data: shiftAktif } = await supabaseAdmin
       .from('shift')
       .select('id')
       .eq('toko_id', toko_id)
       .eq('kasir_id', kasir_id)
-      .eq('status', 'buka')
+      .in('status', ['buka', 'jeda'])
+      .order('waktu_buka', { ascending: false })
+      .limit(1)
       .maybeSingle();
 
     if (shiftAktif) {
@@ -32,55 +59,102 @@ export const shiftService = {
     return shiftBaru;
   },
 
-  // Get Shift yang Sedang Buka
+  // Get Shift yang Sedang Buka/Jeda (utk resume)
   async getShiftAktif(toko_id, kasir_id) {
     const { data, error } = await supabaseAdmin
       .from('shift')
       .select('*, kasir:kasir_id(nama)')
       .eq('toko_id', toko_id)
       .eq('kasir_id', kasir_id)
-      .eq('status', 'buka')
+      .in('status', ['buka', 'jeda'])
+      .order('waktu_buka', { ascending: false })
+      .limit(1)
       .maybeSingle();
 
     return data || null;
   },
 
+  // Jeda Shift (status buka -> jeda)
+  async jedaShift(toko_id, kasir_id) {
+    const { data: shiftAktif } = await supabaseAdmin
+      .from('shift')
+      .select('id')
+      .eq('toko_id', toko_id)
+      .eq('kasir_id', kasir_id)
+      .eq('status', 'buka')
+      .order('waktu_buka', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (!shiftAktif) {
+      throw new Error('Tidak ada shift aktif untuk dijeda');
+    }
+
+    const { data, error } = await supabaseAdmin
+      .from('shift')
+      .update({ status: 'jeda', waktu_jeda: new Date().toISOString() })
+      .eq('toko_id', toko_id)
+      .eq('id', shiftAktif.id)
+      .select()
+      .single();
+
+    if (error) throw new Error('Gagal menjeda shift: ' + error.message);
+    return data;
+  },
+
+  // Lanjut Shift (status jeda -> buka)
+  async lanjutShift(toko_id, kasir_id) {
+    const { data: shiftJeda } = await supabaseAdmin
+      .from('shift')
+      .select('id')
+      .eq('toko_id', toko_id)
+      .eq('kasir_id', kasir_id)
+      .eq('status', 'jeda')
+      .order('waktu_buka', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (!shiftJeda) {
+      throw new Error('Tidak ada shift yang dijeda');
+    }
+
+    const { data, error } = await supabaseAdmin
+      .from('shift')
+      .update({ status: 'buka', waktu_jeda: null })
+      .eq('toko_id', toko_id)
+      .eq('id', shiftJeda.id)
+      .select()
+      .single();
+
+    if (error) throw new Error('Gagal melanjutkan shift: ' + error.message);
+    return data;
+  },
+
   // Tutup Shift
   async tutupShift(toko_id, kasir_id, { shift_id, kas_aktual, catatan }) {
     // Ambil rekap transaksi penjualan selama shift ini
-    const { data: txList } = await supabaseAdmin
+    const { data: txList, error: txError } = await supabaseAdmin
       .from('transaksi')
       .select('total, diskon_total, metode_bayar, status')
       .eq('toko_id', toko_id)
       .eq('shift_id', shift_id);
 
-    let total_penjualan = 0;
-    let total_void = 0;
-    let total_cash = 0;
-    let total_qris = 0;
-    let total_transfer = 0;
-
-    if (txList) {
-      for (const tx of txList) {
-        if (tx.status === 'void') {
-          total_void += Number(tx.total);
-        } else {
-          total_penjualan += Number(tx.total);
-          if (tx.metode_bayar === 'cash') total_cash += Number(tx.total);
-          if (tx.metode_bayar === 'qris') total_qris += Number(tx.total);
-          if (tx.metode_bayar === 'transfer') total_transfer += Number(tx.total);
-        }
-      }
-    }
+    if (txError) throw new Error('Gagal mengambil transaksi shift: ' + txError.message);
+    const summary = summarizeTransactions(txList);
 
     // Ambil shift header
-    const { data: shiftCurrent } = await supabaseAdmin
+    const { data: shiftCurrent, error: shiftError } = await supabaseAdmin
       .from('shift')
       .select('modal_awal')
       .eq('id', shift_id)
+      .eq('toko_id', toko_id)
+      .eq('kasir_id', kasir_id)
+      .in('status', ['buka', 'jeda'])
       .single();
 
-    const expectedKas = Number(shiftCurrent.modal_awal) + total_cash;
+    if (shiftError || !shiftCurrent) throw new Error('Shift aktif tidak ditemukan');
+
+    const expectedKas = Number(shiftCurrent.modal_awal) + summary.total_cash;
     const selisih = Number(kas_aktual) - expectedKas;
 
     const { data: shiftClosed, error } = await supabaseAdmin
@@ -88,11 +162,11 @@ export const shiftService = {
       .update({
         waktu_tutup: new Date().toISOString(),
         kas_aktual,
-        total_penjualan,
-        total_void,
-        total_cash,
-        total_qris,
-        total_transfer,
+        total_penjualan: summary.total_penjualan,
+        total_void: summary.total_void,
+        total_cash: summary.total_cash,
+        total_qris: summary.total_qris,
+        total_transfer: summary.total_transfer,
         selisih,
         catatan,
         status: 'tutup',
@@ -125,14 +199,28 @@ export const shiftService = {
 
   // Detail Shift + Rekap
   async getShiftById(toko_id, id) {
-    const { data, error } = await supabaseAdmin
+    const { data: shift, error: shiftError } = await supabaseAdmin
       .from('shift')
-      .select('*, kasir:kasir_id(nama), transaksi(*)')
+      .select('*, kasir:kasir_id(nama)')
       .eq('toko_id', toko_id)
       .eq('id', id)
       .single();
 
-    if (error) throw new Error('Shift tidak ditemukan');
-    return data;
+    if (shiftError || !shift) throw new Error('Shift tidak ditemukan');
+
+    const { data: txList, error: txError } = await supabaseAdmin
+      .from('transaksi')
+      .select('*')
+      .eq('toko_id', toko_id)
+      .eq('shift_id', id)
+      .order('created_at', { ascending: false });
+
+    if (txError) throw new Error('Gagal mengambil transaksi shift: ' + txError.message);
+
+    return {
+      ...shift,
+      transaksi: txList || [],
+      ...summarizeTransactions(txList || []),
+    };
   },
 };

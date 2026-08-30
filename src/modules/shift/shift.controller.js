@@ -19,6 +19,18 @@ export const shiftController = {
     return reply.send(responseSukses(data, 'Status shift aktif'));
   },
 
+  // POST /api/shift/jeda
+  async jeda(request, reply) {
+    const data = await shiftService.jedaShift(request.toko_id, request.pengguna.id);
+    return reply.send(responseSukses(data, 'Shift dijeda'));
+  },
+
+  // POST /api/shift/lanjut
+  async lanjut(request, reply) {
+    const data = await shiftService.lanjutShift(request.toko_id, request.pengguna.id);
+    return reply.send(responseSukses(data, 'Shift dilanjutkan'));
+  },
+
   // POST /api/shift/tutup
   async tutup(request, reply) {
     const { shift_id, kas_aktual, catatan } = request.body || {};

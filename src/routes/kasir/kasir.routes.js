@@ -26,6 +26,8 @@ export async function kasirRoutes(fastify, options) {
   // --- Shift Management ---
   fastify.post('/shift/buka', { schema: { tags: ['Kasir Operations (/api/kasir)'], summary: 'Buka Shift Baru' } }, shiftController.buka);
   fastify.get('/shift/aktif', { schema: { tags: ['Kasir Operations (/api/kasir)'], summary: 'Get Shift Aktif Kasir Ini' } }, shiftController.shiftAktif);
+  fastify.post('/shift/jeda', { schema: { tags: ['Kasir Operations (/api/kasir)'], summary: 'Jeda Shift Aktif' } }, shiftController.jeda);
+  fastify.post('/shift/lanjut', { schema: { tags: ['Kasir Operations (/api/kasir)'], summary: 'Lanjutkan Shift dari Jeda' } }, shiftController.lanjut);
   fastify.post('/shift/tutup', { schema: { tags: ['Kasir Operations (/api/kasir)'], summary: 'Tutup Shift + Rekap Kas' } }, shiftController.tutup);
   fastify.get('/shift/:id', { schema: { tags: ['Kasir Operations (/api/kasir)'], summary: 'Detail Rekap Shift' } }, shiftController.detail);
 

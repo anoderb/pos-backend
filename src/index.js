@@ -108,8 +108,8 @@ await fastify.register(rateLimit, {
   timeWindow: '1 minute',
   errorResponseBuilder: (_request, context) => ({
     statusCode: context.statusCode,
-    error: 'Too Many Requests',
-    message: `Terlalu banyak permintaan. Coba lagi dalam ${context.after}.`,
+    berhasil: false,
+    pesan: `Terlalu banyak permintaan. Coba lagi dalam ${context.after}.`,
     retry_after_seconds: Math.ceil((context.ttl || 0) / 1000),
   }),
 });
