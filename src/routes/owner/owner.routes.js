@@ -12,6 +12,7 @@ import { stockAdjustmentController } from '../../modules/stock-adjustment/stock-
 import { opnameController } from '../../modules/opname/opname.controller.js';
 import { tokoController } from '../../modules/toko/toko.controller.js';
 import { shiftController } from '../../modules/shift/shift.controller.js';
+import { qrisController } from '../../modules/qris/qris.controller.js';
 
 export async function ownerRoutes(fastify, options) {
   fastify.addHook('preHandler', authenticate);
@@ -27,6 +28,7 @@ export async function ownerRoutes(fastify, options) {
   fastify.get('/laporan/penjualan', ownerTag('Laporan Penjualan Toko'), laporanController.penjualan);
   fastify.get('/laporan/ringkasan', ownerTag('Ringkasan Laporan Keuangan'), laporanController.ringkasan);
   fastify.get('/laporan/riwayat', ownerTag('Riwayat Transaksi Terbaru'), laporanController.riwayat);
+  fastify.get('/laporan/pending', ownerTag('Daftar Transaksi QRIS Pending'), laporanController.pendingQris);
   fastify.get('/laporan/penjualan/export', ownerTag('Export Data Penjualan (Excel/PDF)'), laporanController.exportPenjualan);
   fastify.get('/laporan/stok', ownerTag('Laporan Inventori & Nilai Stok'), laporanController.stok);
   fastify.get('/laporan/stok/export', ownerTag('Export Data Stok (Excel/PDF)'), laporanController.exportStok);
@@ -119,4 +121,7 @@ export async function ownerRoutes(fastify, options) {
   fastify.put('/toko', ownerTag('Update Pengaturan Toko'), tokoController.updateToko);
   fastify.post('/toko/logo', ownerTag('Upload Logo Toko'), tokoController.uploadLogo);
   fastify.post('/toko/qris', ownerTag('Upload Gambar QRIS Toko'), tokoController.uploadQris);
+  // QRIS Dinamis: set/validasi string QRIS + lihat status
+  fastify.put('/toko/qris', ownerTag('Set QRIS String (validasi)'), qrisController.setQris);
+  fastify.get('/toko/qris/status', ownerTag('Status QRIS Toko'), qrisController.getStatus);
 }

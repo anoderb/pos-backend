@@ -4,6 +4,12 @@ function summarizeTransactions(txList = []) {
   return txList.reduce((summary, tx) => {
     const total = Number(tx.total) || 0;
 
+    // Pending (QRIS belum dibayar) tidak dihitung ke rekap — masuk setelah approved.
+    if (tx.status === 'pending') {
+      summary.total_pending += total;
+      summary.total_transaksi_pending += 1;
+      return summary;
+    }
     summary.total_transaksi += 1;
     if (tx.status === 'void') {
       summary.total_void += total;
@@ -22,6 +28,8 @@ function summarizeTransactions(txList = []) {
     total_cash: 0,
     total_qris: 0,
     total_transfer: 0,
+    total_pending: 0,
+    total_transaksi_pending: 0,
   });
 }
 

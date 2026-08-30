@@ -1,0 +1,24 @@
+feat(qris): QRIS dinamis + approval manual + hapus metode transfer
+
+Backend:
+- Port library qris-dinamis (MIT) ke src/utils/qris-utils.mjs:
+  validateQRIS, parseQRIS, convertQRIS (static->dynamic), CRC16
+- Modul terpisah src/modules/qris/ (service+controller) utk set/validasi QRIS:
+  PUT /owner/toko/qris (validasi + simpan), GET /owner/toko/qris/status
+- Checkout metode qris: generate payload dinamis (nominal), transaksi status=
+  pending + status_qris=pending + qris_payload, stok TIDAK dipotong dulu
+- Approve QRIS: POST /kasir/transaksi/:id/qris/approve -> selesai + potong
+  stok; Cancel: POST .../qris/cancel -> WAJIB alasan -> void + cancelled
+- RBAC: kasir hanya approve/cancel transaksi miliknya; owner semua
+- Laporan: GET /owner/laporan/pending (daftar transaksi pending)
+- Rekap shift: pending masuk total_pending, TIDAK dihitung omzet sampai
+  d-approve; laporan omzet tetap filter status='selesai'
+- Metode bayar: hanya cash/qris (transfer dihapus dari validasi)
+
+Migration: src/db/migrate-qris-dinamis.sql (kolom qris toko/transaksi +
+constraint status tambah 'pending' + constraint metode bayar drop transfer)
+SUDAH dieksekusi user di Supabase.
+
+Test: src/scripts/test-qris-dinamis.mjs 7/7 PASS (set valid, invalid ditolak,
+checkout pending tanpa potong stok, payload CRC valid, laporan pending,
+approve->selesai+stok berkurang, cancel wajib alasan)

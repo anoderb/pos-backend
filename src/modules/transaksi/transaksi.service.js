@@ -29,9 +29,10 @@ export const transaksiService = {
     const nomor_transaksi = payload.nomor_transaksi || generateNomorTransaksi();
 
     // ── Validasi dasar ──
-    const VALID_METODE_BAYAR = ['cash', 'tunai', 'qris', 'transfer', 'kartu_kredit', 'kartu_debit', 'lainnya'];
+    // QRIS Dinamis: metode bayar hanya cash/qris (transfer dihapus)
+    const VALID_METODE_BAYAR = ['cash', 'tunai', 'qris'];
     if (!metode_bayar || !VALID_METODE_BAYAR.includes(metode_bayar)) {
-      throw new Error('Metode bayar tidak valid. Pilihan: tunai, qris, transfer, kartu_kredit, kartu_debit, lainnya');
+      throw new Error('Metode bayar tidak valid. Pilihan: tunai, qris.');
     }
     // Normalisasi ke nilai yang diterima DB constraint: cash/qris/transfer.
     // FE legacy pakai 'tunai' → map ke 'cash'.
@@ -126,6 +127,26 @@ export const transaksiService = {
     if (metodeDb === 'cash' && nominal < total) {
       throw new Error(`Uang pembayaran tidak mencukupi. Total: ${total}, Dibayar: ${nominal}`);
     }
+
+    // ── QRIS Dinamis: metode qris → generate payload dinamis + status pending ──
+    let qrisPayload = null;
+    let transaksiStatus = 'selesai';
+    let statusQris = null;
+    if (metodeDb === 'qris') {
+      // Ambil QRIS valid toko
+      const { data: tokoQris } = await supabaseAdmin
+        .from('toko')
+        .select('qris_string, qris_status')
+        .eq('id', toko_id)
+        .maybeSingle();
+      if (!tokoQris?.qris_string || tokoQris.qris_status !== 'valid') {
+        throw new Error('QRIS belum diatur untuk toko ini. Silakan atur QRIS di Pengaturan.');
+      }
+      const { convertQRIS } = await import('../../utils/qris-utils.mjs');
+      qrisPayload = convertQRIS(tokoQris.qris_string, { amount: total });
+      transaksiStatus = 'pending';
+      statusQris = 'pending';
+    }
     const kembalian = metodeDb === 'cash' ? Math.max(0, nominal - total) : 0;
 
     // ── Atomic stock reserve (#2): decrement atomik dilakukan SETELAH header+items,
@@ -146,7 +167,9 @@ export const transaksiService = {
       nominal_bayar: nominal,
       kembalian,
       idempotency_key: idempotency_key || null,
-      status: 'selesai',
+      status: transaksiStatus,
+      status_qris: statusQris,
+      qris_payload: qrisPayload,
       is_offline: is_offline || false,
       created_at: new Date().toISOString(),
     };
@@ -178,10 +201,97 @@ export const transaksiService = {
       throw new Error('Gagal menyimpan item transaksi: ' + errItems.message);
     }
 
-    // 3. Potong stok & catat stock_movement (atomic decrement)
-    await this.decrementStokAtomik(toko_id, tx, resolvedItems);
+    // 3. Potong stok HANYA utk transaksi selesai (cash). QRIS pending TIDAK
+    //    dikurangi dulu — stok dipotong saat di-approve (lihat approveTransaksiQris).
+    if (transaksiStatus === 'selesai') {
+      await this.decrementStokAtomik(toko_id, tx, resolvedItems);
+    }
 
     return tx;
+  },
+
+  // Approve transaksi QRIS pending → selesai + potong stok + catat omzet
+  async approveTransaksiQris(toko_id, id, actor_id, actorRole, { alasan } = {}) {
+    const { data: tx } = await supabaseAdmin
+      .from('transaksi')
+      .select('*')
+      .eq('toko_id', toko_id)
+      .eq('id', id)
+      .maybeSingle();
+    if (!tx) throw new Error('Transaksi tidak ditemukan');
+    if (tx.status_qris !== 'pending' || tx.metode_bayar !== 'qris') {
+      throw new Error('Hanya transaksi QRIS berstatus pending yang dapat di-approve');
+    }
+    if (actorRole !== 'owner' && tx.kasir_id !== actor_id) {
+      throw new Error('Anda hanya dapat meng-approve transaksi yang Anda buat sendiri');
+    }
+
+    // Ambil items utk potong stok
+    const { data: items } = await supabaseAdmin
+      .from('transaksi_item')
+      .select('*')
+      .eq('transaksi_id', tx.id);
+    const resolved = (items || []).map((it) => ({
+      produk_id: it.produk_id,
+      nama_produk: it.nama_produk,
+      qty: it.qty,
+      konversi: it.konversi || 1,
+      harga_satuan: it.harga_satuan,
+      subtotal: it.subtotal,
+    }));
+
+    // Update status
+    const { data: updated, error } = await supabaseAdmin
+      .from('transaksi')
+      .update({
+        status: 'selesai',
+        status_qris: 'approved',
+        qris_alasan: alasan || null,
+        qris_action_by: actor_id,
+        qris_action_at: new Date().toISOString(),
+      })
+      .eq('id', tx.id)
+      .select()
+      .maybeSingle();
+    if (error || !updated) throw new Error('Gagal meng-approve transaksi');
+
+    // Potong stok
+    if (resolved.length > 0) {
+      await this.decrementStokAtomik(toko_id, updated, resolved);
+    }
+    return updated;
+  },
+
+  // Cancel transaksi QRIS pending → batal (stok memang belum dipotong)
+  async cancelTransaksiQris(toko_id, id, actor_id, actorRole, { alasan }) {
+    const { data: tx } = await supabaseAdmin
+      .from('transaksi')
+      .select('*')
+      .eq('toko_id', toko_id)
+      .eq('id', id)
+      .maybeSingle();
+    if (!tx) throw new Error('Transaksi tidak ditemukan');
+    if (tx.status_qris !== 'pending' || tx.metode_bayar !== 'qris') {
+      throw new Error('Hanya transaksi QRIS berstatus pending yang dapat dibatalkan');
+    }
+    if (actorRole !== 'owner' && tx.kasir_id !== actor_id) {
+      throw new Error('Anda hanya dapat membatalkan transaksi yang Anda buat sendiri');
+    }
+
+    const { data: updated, error } = await supabaseAdmin
+      .from('transaksi')
+      .update({
+        status: 'void',
+        status_qris: 'cancelled',
+        qris_alasan: alasan || null,
+        qris_action_by: actor_id,
+        qris_action_at: new Date().toISOString(),
+      })
+      .eq('id', tx.id)
+      .select()
+      .maybeSingle();
+    if (error || !updated) throw new Error('Gagal membatalkan transaksi');
+    return updated;
   },
 
   // Atomic stock decrement anti-oversell (#2)

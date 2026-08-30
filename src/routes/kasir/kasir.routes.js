@@ -22,6 +22,8 @@ export async function kasirRoutes(fastify, options) {
   fastify.get('/transaksi', { schema: { tags: ['Kasir Operations (/api/kasir)'], summary: 'List Transaksi Kasir' } }, transaksiController.list);
   fastify.get('/transaksi/:id', { schema: { tags: ['Kasir Operations (/api/kasir)'], summary: 'Detail Transaksi' } }, transaksiController.detail);
   fastify.post('/transaksi/:id/void', { schema: { tags: ['Kasir Operations (/api/kasir)'], summary: 'Void Transaksi Penjualan' } }, transaksiController.voidTx);
+  fastify.post('/transaksi/:id/qris/approve', { schema: { tags: ['Kasir Operations (/api/kasir)'], summary: 'Approve Pembayaran QRIS Pending' } }, transaksiController.approveQris);
+  fastify.post('/transaksi/:id/qris/cancel', { schema: { tags: ['Kasir Operations (/api/kasir)'], summary: 'Batalkan Pembayaran QRIS Pending' } }, transaksiController.cancelQris);
 
   // --- Shift Management ---
   fastify.post('/shift/buka', { schema: { tags: ['Kasir Operations (/api/kasir)'], summary: 'Buka Shift Baru' } }, shiftController.buka);

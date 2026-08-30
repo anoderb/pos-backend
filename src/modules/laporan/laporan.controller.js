@@ -34,6 +34,15 @@ export const laporanController = {
     return reply.send(responseSukses(data, 'Riwayat transaksi'));
   },
 
+  async pendingQris(request, reply) {
+    const { page, pageSize } = request.query || {};
+    const data = await laporanService.getTransaksiPending(request.toko_id, {
+      page: page || 1,
+      pageSize: pageSize || 20,
+    });
+    return reply.send(responseSukses(data, 'Daftar transaksi QRIS pending'));
+  },
+
   async stok(request, reply) {
     const data = await laporanService.getLaporanStok(request.toko_id);
     return reply.send(responseSukses(data, 'Laporan stok produk'));
