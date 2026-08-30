@@ -28,6 +28,8 @@ export function serializeToko(t = {}) {
     qris_url: t.qris_url,
     qris_mid: t.qris_mid,
     qris_merchant_name: t.qris_merchant_name,
+    qris_status: t.qris_status || 'empty',
+    qris_info: t.qris_info || null,
     transfer_aktif: t.transfer_aktif,
     bank_nama: t.bank_nama,
     bank_no_rekening: t.bank_no_rekening,

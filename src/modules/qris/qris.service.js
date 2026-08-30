@@ -44,12 +44,13 @@ export const qrisService = {
       country: info.countryCode,
     };
 
+    // Menyimpan QRIS valid = otomatis mengaktifkan metode QRIS
     await supabaseAdmin
       .from('toko')
-      .update({ qris_string: clean, qris_status: 'valid', qris_info: infoRingkas })
+      .update({ qris_string: clean, qris_status: 'valid', qris_info: infoRingkas, qris_aktif: true })
       .eq('id', toko_id);
 
-    return { qris_status: 'valid', qris_info: infoRingkas, pesan: 'QRIS berhasil disimpan dan diaktifkan' };
+    return { qris_status: 'valid', qris_info: infoRingkas, qris_aktif: true, pesan: 'QRIS berhasil disimpan dan diaktifkan' };
   },
 
   // Generate QRIS dinamis untuk transaksi tertentu (pure function, tidak pakai DB)
