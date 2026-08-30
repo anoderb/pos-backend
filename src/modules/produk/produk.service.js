@@ -204,9 +204,10 @@ export const produkService = {
       `)
       .eq('toko_id', toko_id)
       .eq('id', id)
-      .single();
+      .maybeSingle();
 
     if (error) throw new Error('Produk tidak ditemukan');
+    if (!data) throw new Error('Produk tidak ditemukan');
     return data;
   },
 
@@ -310,9 +311,10 @@ export const produkService = {
       .eq('toko_id', toko_id)
       .eq('id', id)
       .select()
-      .single();
+      .maybeSingle();
 
     if (error) throw new Error('Gagal mengedit produk: ' + error.message);
+    if (!data) throw new Error('Produk tidak ditemukan');
 
     // Update or insert default selling price if provided in payload
     if (payload.harga_jual_default !== undefined || payload.harga !== undefined || payload.harga_ecer !== undefined) {
@@ -372,9 +374,10 @@ export const produkService = {
       .eq('toko_id', toko_id)
       .eq('id', id)
       .select()
-      .single();
+      .maybeSingle();
 
     if (error) throw new Error('Gagal menonaktifkan produk');
+    if (!data) throw new Error('Produk tidak ditemukan');
     return data;
   },
 
@@ -453,8 +456,9 @@ export const produkService = {
       .eq('produk_id', produk_id)
       .eq('id', sid)
       .select()
-      .single();
+      .maybeSingle();
     if (error) throw new Error('Gagal memperbarui satuan jual');
+    if (!data) throw new Error('Satuan jual tidak ditemukan');
     return data;
   },
 
@@ -466,8 +470,9 @@ export const produkService = {
       .eq('produk_id', produk_id)
       .eq('id', sid)
       .select()
-      .single();
+      .maybeSingle();
     if (error) throw new Error('Gagal menghapus satuan jual');
+    if (!data) throw new Error('Satuan jual tidak ditemukan');
     return data;
   },
 
@@ -512,8 +517,9 @@ export const produkService = {
       .eq('produk_id', produk_id)
       .eq('id', sid)
       .select()
-      .single();
+      .maybeSingle();
     if (error) throw new Error('Gagal memperbarui satuan beli: ' + error.message);
+    if (!data) throw new Error('Satuan beli tidak ditemukan');
     return data;
   },
 
@@ -525,8 +531,9 @@ export const produkService = {
       .eq('produk_id', produk_id)
       .eq('id', sid)
       .select()
-      .single();
+      .maybeSingle();
     if (error) throw new Error('Gagal menghapus satuan beli');
+    if (!data) throw new Error('Satuan beli tidak ditemukan');
     return data;
   },
 };

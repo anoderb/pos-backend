@@ -57,9 +57,10 @@ export const supplierService = {
       .select('*, nota_masuk(*)')
       .eq('toko_id', toko_id)
       .eq('id', id)
-      .single();
+      .maybeSingle();
 
     if (error) throw new Error('Supplier tidak ditemukan');
+    if (!data) throw new Error('Supplier tidak ditemukan');
     return data;
   },
 
@@ -79,9 +80,10 @@ export const supplierService = {
       .eq('toko_id', toko_id)
       .eq('id', id)
       .select()
-      .single();
+      .maybeSingle();
 
     if (error) throw new Error('Gagal mengedit supplier: ' + error.message);
+    if (!data) throw new Error('Supplier tidak ditemukan');
     return data;
   },
 
@@ -92,9 +94,10 @@ export const supplierService = {
       .eq('toko_id', toko_id)
       .eq('id', id)
       .select()
-      .single();
+      .maybeSingle();
 
     if (error) throw new Error('Gagal menonaktifkan supplier');
+    if (!data) throw new Error('Supplier tidak ditemukan');
     return data;
   },
 

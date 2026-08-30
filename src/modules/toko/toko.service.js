@@ -20,9 +20,10 @@ export const tokoService = {
       .from('toko')
       .select('*')
       .eq('id', toko_id)
-      .single();
+      .maybeSingle();
 
     if (error) throw new Error('Data toko tidak ditemukan');
+    if (!data) throw new Error('Data toko tidak ditemukan');
 
     // Bucket toko-logos private: expose fresh signed URL for FE/navbar.
     if (data.logo_url && data.logo_url.includes('/storage/v1/object/')) {
@@ -52,7 +53,7 @@ export const tokoService = {
       .from('toko')
       .select('id, owner_id')
       .eq('id', toko_id)
-      .single();
+      .maybeSingle();
 
     if (!existing) throw new Error('Data toko tidak ditemukan');
     if (existing.owner_id !== owner_id) {
@@ -80,9 +81,10 @@ export const tokoService = {
       .update(updateData)
       .eq('id', toko_id)
       .select()
-      .single();
+      .maybeSingle();
 
     if (error) throw new Error('Gagal memperbarui data toko: ' + error.message);
+    if (!data) throw new Error('Data toko tidak ditemukan');
     return data;
   },
 
@@ -115,8 +117,9 @@ export const tokoService = {
       throw new Error('URL foto tidak berhasil dibuat dari Storage');
     }
     const { data, error } = await supabaseAdmin
-      .from('toko').update({ [field]: finalUrl }).eq('id', toko_id).select().single();
+      .from('toko').update({ [field]: finalUrl }).eq('id', toko_id).select().maybeSingle();
     if (error) throw new Error('Gagal memperbarui foto toko: ' + error.message);
+    if (!data) throw new Error('Data toko tidak ditemukan');
     return data;
   },
 };

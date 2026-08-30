@@ -296,9 +296,10 @@ export const transaksiService = {
       .select('*, kasir:kasir_id(nama), pelanggan:pelanggan_id(nama), items:transaksi_item(*)')
       .eq('toko_id', toko_id)
       .eq('id', id)
-      .single();
+      .maybeSingle();
 
     if (error) throw new Error('Transaksi tidak ditemukan');
+    if (!data) throw new Error('Transaksi tidak ditemukan');
     return data;
   },
 
@@ -309,7 +310,7 @@ export const transaksiService = {
       .select('*, items:transaksi_item(*)')
       .eq('toko_id', toko_id)
       .eq('id', id)
-      .single();
+      .maybeSingle();
 
     if (!tx) throw new Error('Transaksi tidak ditemukan');
     if (tx.status === 'void') throw new Error('Transaksi ini sudah divoid sebelumnya');
@@ -333,9 +334,10 @@ export const transaksiService = {
       })
       .eq('id', id)
       .select()
-      .single();
+      .maybeSingle();
 
     if (error) throw new Error('Gagal memvoid transaksi');
+    if (!data) throw new Error('Transaksi tidak ditemukan');
 
     await auditLog({
       toko_id,

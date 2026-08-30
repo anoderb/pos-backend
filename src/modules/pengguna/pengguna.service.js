@@ -96,9 +96,10 @@ export const penggunaService = {
       .select('*')
       .eq('toko_id', toko_id)
       .eq('id', id)
-      .single();
+      .maybeSingle();
 
-    if (error) throw new Error('Kasir tidak ditemukan');
+    if (error) throw new Error('Gagal mengambil kasir');
+    if (!data) throw new Error('Kasir tidak ditemukan');
     return data;
   },
 

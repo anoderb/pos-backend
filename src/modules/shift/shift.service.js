@@ -96,9 +96,10 @@ export const shiftService = {
       .eq('toko_id', toko_id)
       .eq('id', shiftAktif.id)
       .select()
-      .single();
+      .maybeSingle();
 
     if (error) throw new Error('Gagal menjeda shift: ' + error.message);
+    if (!data) throw new Error('Shift tidak ditemukan');
     return data;
   },
 
@@ -124,9 +125,10 @@ export const shiftService = {
       .eq('toko_id', toko_id)
       .eq('id', shiftJeda.id)
       .select()
-      .single();
+      .maybeSingle();
 
     if (error) throw new Error('Gagal melanjutkan shift: ' + error.message);
+    if (!data) throw new Error('Shift tidak ditemukan');
     return data;
   },
 
@@ -150,7 +152,7 @@ export const shiftService = {
       .eq('toko_id', toko_id)
       .eq('kasir_id', kasir_id)
       .in('status', ['buka', 'jeda'])
-      .single();
+      .maybeSingle();
 
     if (shiftError || !shiftCurrent) throw new Error('Shift aktif tidak ditemukan');
 
@@ -175,9 +177,10 @@ export const shiftService = {
       .eq('id', shift_id)
       .eq('kasir_id', kasir_id)
       .select()
-      .single();
+      .maybeSingle();
 
     if (error) throw new Error('Gagal menutup shift: ' + error.message);
+    if (!data) throw new Error('Shift tidak ditemukan');
     return shiftClosed;
   },
 
@@ -204,7 +207,7 @@ export const shiftService = {
       .select('*, kasir:kasir_id(nama)')
       .eq('toko_id', toko_id)
       .eq('id', id)
-      .single();
+      .maybeSingle();
 
     if (shiftError || !shift) throw new Error('Shift tidak ditemukan');
 

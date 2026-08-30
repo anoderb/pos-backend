@@ -37,9 +37,10 @@ export const satuanService = {
       .eq('toko_id', toko_id)
       .eq('id', id)
       .select()
-      .single();
+      .maybeSingle();
 
     if (error) throw new Error('Gagal mengedit satuan');
+    if (!data) throw new Error('Satuan tidak ditemukan');
     return data;
   },
 
@@ -50,9 +51,10 @@ export const satuanService = {
       .eq('toko_id', toko_id)
       .eq('id', id)
       .select()
-      .single();
+      .maybeSingle();
 
     if (error) throw new Error('Gagal menghapus satuan');
+    if (!data) throw new Error('Satuan tidak ditemukan');
     return data;
   },
 };

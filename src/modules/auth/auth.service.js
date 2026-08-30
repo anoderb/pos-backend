@@ -372,10 +372,11 @@ export const authService = {
     const { data, error } = await supabaseAdmin
       .from('pengguna')
       .select('*, toko:toko_id(*)')
-      .eq('email', email)
-      .single();
+      .ilike('email', email)
+      .maybeSingle();
 
-    if (error) throw new Error('Profil tidak ditemukan');
+    if (error) throw new Error('Gagal mengambil profil');
+    if (!data) throw new Error('Profil tidak ditemukan');
     return data;
   },
 };

@@ -58,9 +58,10 @@ export const pelangganService = {
       .select('*, transaksi(*)')
       .eq('toko_id', toko_id)
       .eq('id', id)
-      .single();
+      .maybeSingle();
 
     if (error) throw new Error('Pelanggan tidak ditemukan');
+    if (!data) throw new Error('Pelanggan tidak ditemukan');
     return data;
   },
 
@@ -80,9 +81,10 @@ export const pelangganService = {
       .eq('toko_id', toko_id)
       .eq('id', id)
       .select()
-      .single();
+      .maybeSingle();
 
     if (error) throw new Error('Gagal mengedit pelanggan: ' + error.message);
+    if (!data) throw new Error('Pelanggan tidak ditemukan');
     return data;
   },
 
@@ -93,9 +95,10 @@ export const pelangganService = {
       .eq('toko_id', toko_id)
       .eq('id', id)
       .select()
-      .single();
+      .maybeSingle();
 
     if (error) throw new Error('Gagal menghapus pelanggan');
+    if (!data) throw new Error('Pelanggan tidak ditemukan');
     return data;
   },
 };
