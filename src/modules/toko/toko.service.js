@@ -48,10 +48,10 @@ export const tokoService = {
     delete clean.updated_at;
     delete clean.owner_id;
 
-    // Verify ownership: toko_id belongs to owner
+    // Verify ownership: toko_id belongs to owner + baca state pembayaran utk validasi silang
     const { data: existing } = await supabaseAdmin
       .from('toko')
-      .select('id, owner_id')
+      .select('*')
       .eq('id', toko_id)
       .maybeSingle();
 
@@ -75,6 +75,24 @@ export const tokoService = {
     if (clean.bank_atas_nama !== undefined) updateData.bank_atas_nama = sanitizeOptionalText(clean.bank_atas_nama, { max: 200 });
     if (clean.qris_aktif !== undefined) updateData.qris_aktif = clean.qris_aktif === true || clean.qris_aktif === 'true';
     if (clean.transfer_aktif !== undefined) updateData.transfer_aktif = clean.transfer_aktif === true || clean.transfer_aktif === 'true';
+    if (clean.tunai_aktif !== undefined) updateData.tunai_aktif = clean.tunai_aktif === true || clean.tunai_aktif === 'true';
+
+    // ── Validasi silang metode pembayaran (#payment-gate) ──
+    // Ambil state terkini utk validasi (combine yg di-update + yg ada di DB)
+    const qrisAktifBaru = updateData.qris_aktif !== undefined ? updateData.qris_aktif : !!existing.qris_aktif;
+    const tunaiAktifBaru = updateData.tunai_aktif !== undefined ? updateData.tunai_aktif : !!existing.tunai_aktif;
+    const qrisValid = (existing.qris_status || '') === 'valid' && !!existing.qris_string;
+
+    // 1. QRIS tidak bisa diaktifkan kalau belum ada QRIS valid
+    if (qrisAktifBaru && !qrisValid) {
+      throw new Error('QRIS tidak bisa diaktifkan karena belum ada QRIS yang valid. Silakan atur QRIS di Pengaturan dahulu.');
+    }
+
+    // 2. Minimal satu metode pembayaran harus aktif (jangan sampai semuanya off)
+    const metodeAktifCount = (tunaiAktifBaru ? 1 : 0) + (qrisAktifBaru ? 1 : 0);
+    if (metodeAktifCount === 0) {
+      throw new Error('Minimal satu metode pembayaran harus aktif (Tunai atau QRIS).');
+    }
 
     const { data, error } = await supabaseAdmin
       .from('toko')
