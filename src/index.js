@@ -134,6 +134,19 @@ fastify.addHook('onSend', (request, reply, payload, done) => {
   done();
 });
 
+// Izinkan request JSON dgn body kosong (mis. DELETE/POST tanpa body) —
+// axios FE default kirim Content-Type: application/json walau tanpa body.
+// Fastify default menolak => 400 FST_ERR_CTP_EMPTY_JSON_BODY.
+// Body tidak kosong tetap di-parse pakai parser JSON bawaan (delegasi).
+const fastifyJsonParser = fastify.getDefaultJsonParser('error', 'ignore');
+fastify.addContentTypeParser('application/json', { parseAs: 'buffer' }, (req, body, done) => {
+  if (body && body.length > 0) {
+    fastifyJsonParser(req, body, done);
+  } else {
+    done(null, {});
+  }
+});
+
 // Centralized Error Handler (SEC-10) — jangan bocor detail error ke client
 fastify.setErrorHandler((error, request, reply) => {
   const rawMessage = String(error.message || '');
