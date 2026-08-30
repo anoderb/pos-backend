@@ -11,13 +11,27 @@ async function main() {
   const cookie = (lo.headers.getSetCookie?.() || []).map((c) => c.split(';')[0]).join('; ');
   const st = (await (await fetch(API + '/auth/status', { headers: { Cookie: cookie } })).json()).data.pengguna;
   const tokoId = st.toko_id, kasirId = st.id;
+  const originalToko = (await sb.from('toko').select('qris_string,qris_status,qris_info,qris_aktif').eq('id', tokoId).single()).data;
 
-  const body = '000201010212' + '26' + '16' + '0009ID.CO.EMV01' + '07' + 'TM12345' + '52' + '04' + '4153' + '5303' + '360' + '58' + '02' + 'ID' + '59' + '10' + 'TOKO SEJAHTERA' + '60' + '07' + 'JAKARTA' + '61' + '05' + '12345';
+  const tlv = (tag, value) => tag + String(value.length).padStart(2, '0') + value;
+  const merchantAccount = tlv('00', 'ID.CO.QRIS') + tlv('01', 'MERCHANT123');
+  const body = [
+    tlv('00', '01'),
+    tlv('01', '11'),
+    tlv('26', merchantAccount),
+    tlv('52', '0000'),
+    tlv('53', '360'),
+    tlv('58', 'ID'),
+    tlv('59', 'TOKO BOSS'),
+    tlv('60', 'MALANG'),
+    tlv('61', '65145'),
+  ].join('');
   const qris = body + '6304' + calculateCRC16(body + '6304');
   const results = [];
   const ok = (n, p) => results.push([n, p]);
-  const call = async (path, method = 'GET', bodyData) => {
-    const r = await fetch(API + path, { method, headers: { 'Content-Type': 'application/json', Cookie: cookie }, body: bodyData ? JSON.stringify(bodyData) : undefined });
+  const call = async (path, method = 'GET', bodyData, extraHeaders = {}) => {
+    const headers = { 'Content-Type': 'application/json', Cookie: cookie, ...extraHeaders };
+    const r = await fetch(API + path, { method, headers, body: bodyData === undefined ? undefined : JSON.stringify(bodyData) });
     let j = null; try { j = await r.json(); } catch {}
     return { status: r.status, json: j };
   };
@@ -40,8 +54,7 @@ async function main() {
   await sb.from('produk_satuan_jual').insert({ produk_id: pr.id, satuan_id: sat.id, konversi: 1, harga_ecer: 5000, is_default: true });
 
   // 3. checkout qris -> pending, stok tidak berkurang
-  r = await call('/kasir/transaksi', 'POST', { shift_id: sh.id, metode_bayar: 'qris', items: [{ produk_id: pr.id, qty: 2 }], 'Idempotency-Key': randomUUID() });
-  // note: idempotency via header bukan body; biarkan body tanpa key (fallback ok)
+  r = await call('/kasir/transaksi', 'POST', { shift_id: sh.id, metode_bayar: 'qris', items: [{ produk_id: pr.id, qty: 2 }] }, { 'Idempotency-Key': randomUUID() });
   const txQ = r.json?.data?.id;
   const p1 = (await sb.from('produk').select('stok').eq('id', pr.id).single()).data?.stok;
   ok('3. checkout qris -> pending [' + r.status + '] status=' + r.json?.data?.status + '/' + r.json?.data?.status_qris, r.status === 201 && r.json?.data?.status === 'pending' && r.json?.data?.status_qris === 'pending');
@@ -59,7 +72,7 @@ async function main() {
   ok('5b. stok berkurang 10->8 (' + p2 + ')', p2 === 8);
 
   // 6-7. cancel
-  const txQ2 = (await sb.from('transaksi').insert({ toko_id: tokoId, shift_id: sh.id, kasir_id: kasirId, nomor_transaksi: 'TP-' + Date.now(), subtotal: 5000, total: 5000, metode_bayar: 'qris', status: 'pending', status_qris: 'pending', qris_payload: convertQRIS(qris, { amount: 5000 }), created_at: new Date().toISOString() }).select('id').single()).data;
+  const txQ2 = (await sb.from('transaksi').insert({ toko_id: tokoId, shift_id: sh.id, kasir_id: kasirId, nomor_transaksi: 'TP-' + Date.now(), subtotal: 5000, total: 5000, metode_bayar: 'qris', status: 'pending', status_qris: 'pending', qris_payload: convertQRIS(qris, { amount: 5000 }), created_at: new Date().toISOString() }).select('id').single()).data?.id;
   await sb.from('transaksi_item').insert({ transaksi_id: txQ2, produk_id: pr.id, nama_produk: 'QRIS-PROD', satuan: 'pcs', konversi: 1, qty: 1, harga_satuan: 5000, subtotal: 5000 });
   r = await call('/kasir/transaksi/' + txQ2 + '/qris/cancel', 'POST', {});
   ok('6. cancel tanpa alasan -> 400 [' + r.status + ']', r.status === 400);
@@ -73,7 +86,8 @@ async function main() {
   await sb.from('produk_satuan_jual').delete().eq('produk_id', pr.id);
   await sb.from('produk').delete().eq('id', pr.id);
   await sb.from('shift').delete().eq('id', sh.id);
-  console.log('cleanup done\n');
+  if (originalToko) await sb.from('toko').update(originalToko).eq('id', tokoId);
+  console.log('cleanup done\\n');
   let fail = 0;
   for (const [n, p] of results) { console.log((p ? '✅' : '❌'), n); if (!p) fail++; }
   console.log(fail === 0 ? '\nSEMUA PASS' : '\n' + fail + ' GAGAL');

@@ -1,5 +1,7 @@
 import { supabaseAdmin } from '../../config/database.js';
 import { auditLog } from '../../utils/audit.js';
+import { qrisService } from '../qris/qris.service.js';
+import { parseQRIS, validateQRIS } from '../../utils/qris-utils.mjs';
 
 // Helper generator nomor transaksi anti-collision (cth: TRX-260730-1234567)
 function generateNomorTransaksi() {
@@ -142,8 +144,12 @@ export const transaksiService = {
       if (!tokoQris?.qris_string || tokoQris.qris_status !== 'valid') {
         throw new Error('QRIS belum diatur untuk toko ini. Silakan atur QRIS di Pengaturan.');
       }
-      const { convertQRIS } = await import('../../utils/qris-utils.mjs');
-      qrisPayload = convertQRIS(tokoQris.qris_string, { amount: total });
+      qrisPayload = qrisService.generateDinamis(tokoQris.qris_string, total);
+      const hasilQris = parseQRIS(qrisPayload);
+      const hasilValidasi = validateQRIS(qrisPayload, { requireIdr: true, requireMerchantDetails: true });
+      if (!hasilValidasi.valid || hasilQris.method !== 'dynamic' || hasilQris.amount !== String(total)) {
+        throw new Error('QRIS pembayaran gagal diverifikasi. Silakan upload ulang QRIS asli.');
+      }
       transaksiStatus = 'pending';
       statusQris = 'pending';
     }

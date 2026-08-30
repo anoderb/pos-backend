@@ -13,6 +13,32 @@ function isValidUrl(url) {
   } catch { return false; }
 }
 
+const MEDIA_BUCKETS = Object.freeze({
+  logo_url: 'toko-logos',
+  qris_url: 'toko-qris',
+});
+
+function getMediaPath(url, bucket) {
+  if (typeof url !== 'string' || !url.includes('/storage/v1/object/')) return null;
+  try {
+    const afterMarker = url.split('/storage/v1/object/')[1].split('?')[0];
+    const parts = afterMarker.split('/');
+    if (parts[0] === 'sign' || parts[0] === 'public') parts.shift();
+    if (parts.shift() !== bucket) return null;
+    return parts.map((part) => decodeURIComponent(part)).join('/');
+  } catch {
+    return null;
+  }
+}
+
+async function attachSignedMedia(data, field) {
+  const bucket = MEDIA_BUCKETS[field];
+  const filePath = getMediaPath(data[field], bucket);
+  if (!bucket || !filePath) return;
+  const { data: signed } = await supabaseAdmin.storage.from(bucket).createSignedUrl(filePath, 3600);
+  if (signed?.signedUrl) data[field] = signed.signedUrl;
+}
+
 export const tokoService = {
   // Ambil detail toko sendiri
   async getToko(toko_id) {
@@ -25,17 +51,11 @@ export const tokoService = {
     if (error) throw new Error('Data toko tidak ditemukan');
     if (!data) throw new Error('Data toko tidak ditemukan');
 
-    // Bucket toko-logos private: expose fresh signed URL for FE/navbar.
-    if (data.logo_url && data.logo_url.includes('/storage/v1/object/')) {
-      const marker = '/storage/v1/object/';
-      const rawPath = data.logo_url.split(marker)[1]?.replace(/^sign\//, '').replace(/^public\//, '');
-      const bucketPrefix = 'toko-logos/';
-      const filePath = rawPath?.includes(bucketPrefix) ? rawPath.split(bucketPrefix)[1].split('?')[0] : null;
-      if (filePath) {
-        const { data: signed } = await supabaseAdmin.storage.from('toko-logos').createSignedUrl(filePath, 3600);
-        if (signed?.signedUrl) data.logo_url = signed.signedUrl;
-      }
-    }
+    // Kedua bucket private: expose signed URL sesuai jenis media.
+    await Promise.all([
+      attachSignedMedia(data, 'logo_url'),
+      attachSignedMedia(data, 'qris_url'),
+    ]);
     return data;
   },
 
@@ -108,6 +128,9 @@ export const tokoService = {
 
   // Update URL/media toko. Data URL diunggah ke Supabase Storage.
   async updateMediaToko(toko_id, field, media_url) {
+    const bucket = MEDIA_BUCKETS[field];
+    if (!bucket) throw new Error('Jenis foto toko tidak dikenal');
+
     let finalUrl = media_url;
     if (typeof media_url === 'string' && media_url.startsWith('data:image/')) {
       const match = media_url.match(/^data:(image\/[\w.+-]+);base64,(.+)$/);
@@ -116,11 +139,11 @@ export const tokoService = {
       const ext = contentType.split('/')[1].replace('jpeg', 'jpg');
       const fileName = `toko-${toko_id}/${field}-${Date.now()}.${ext}`;
       const { error: uploadError } = await supabaseAdmin.storage
-        .from('toko-logos')
+        .from(bucket)
         .upload(fileName, Buffer.from(encoded, 'base64'), { contentType, upsert: true });
       if (uploadError) throw new Error('Gagal upload foto toko: ' + uploadError.message);
       const { data: signedData, error: signedError } = await supabaseAdmin.storage
-        .from('toko-logos').createSignedUrl(fileName, 60 * 60 * 24 * 365);
+        .from(bucket).createSignedUrl(fileName, 60 * 60 * 24 * 365);
       if (signedError) throw new Error('Gagal membuat URL foto toko: ' + signedError.message);
       finalUrl = signedData?.signedUrl;
     }

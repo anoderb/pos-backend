@@ -10,8 +10,16 @@ export const qrisController = {
       const hasil = await qrisService.setQrisToko(request.toko_id, request.pengguna.id, { qris_string });
       return reply.send(responseSukses(hasil, hasil.pesan || 'QRIS disimpan'));
     } catch (err) {
-      const code = String(err.message || '').startsWith('QRIS tidak valid') ? 400 : 403;
-      return reply.code(code).send({ berhasil: false, pesan: err.message });
+      const message = String(err.message || '');
+      const code = message.includes('tidak memiliki akses')
+        ? 403
+        : message.includes('tidak ditemukan')
+          ? 404
+          : 400;
+      return reply.code(code).send({
+        berhasil: false,
+        pesan: message || 'QRIS tidak dapat diproses. Silakan coba lagi.',
+      });
     }
   },
 
