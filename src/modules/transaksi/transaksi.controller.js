@@ -99,12 +99,20 @@ export const transaksiController = {
       return reply.code(400).send({ berhasil: false, pesan: 'Alasan void wajib diisi' });
     }
 
-    const tx = await transaksiService.voidTransaksi(
-      request.toko_id,
-      request.params.id,
-      request.pengguna.id,
-      { alasan_void }
-    );
-    return reply.send(responseSukses(tx, 'Transaksi berhasil divoid'));
+    try {
+      const tx = await transaksiService.voidTransaksi(
+        request.toko_id,
+        request.params.id,
+        request.pengguna.id,
+        { alasan_void, actorRole: request.pengguna.role }
+      );
+      return reply.send(responseSukses(tx, 'Transaksi berhasil divoid'));
+    } catch (err) {
+      const msg = String(err.message || '');
+      if (msg.includes('hanya dapat membatalkan') || msg.toLowerCase().includes('sendiri')) {
+        return reply.code(403).send({ berhasil: false, pesan: msg });
+      }
+      return reply.code(400).send({ berhasil: false, pesan: msg });
+    }
   },
 };

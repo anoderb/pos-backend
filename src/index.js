@@ -138,20 +138,28 @@ fastify.addHook('onSend', (request, reply, payload, done) => {
 fastify.setErrorHandler((error, request, reply) => {
   const rawMessage = String(error.message || '');
   const isValidationError = Boolean(error.validation)
-    || /wajib|tidak valid|tidak boleh|maksimal|minimal|harus berupa|sudah terdaftar|tidak mencukupi/i.test(rawMessage);
+    || /wajib|tidak valid|tidak boleh|maksimal|minimal|harus berupa|sudah terdaftar|tidak mencukupi|stok tidak|diskon tidak/i.test(rawMessage);
   const isNotFoundError = /tidak ditemukan|not found/i.test(rawMessage);
-  const statusCode = error.statusCode || (isValidationError ? 400 : isNotFoundError ? 404 : 500);
+  const isAuthError = /tidak login|sesi|tidak punya akses|hanya dapat membatalkan|ditolak/i.test(rawMessage);
+  const isServerError = !isValidationError && !isNotFoundError && !isAuthError;
+  const statusCode = error.statusCode || (isValidationError ? 400 : isNotFoundError ? 404 : isAuthError ? 403 : 500);
 
-  // Production: 500 = pesan generik, detail error hanya di log server
-  const isDev = process.env.NODE_ENV !== 'production';
-  const message = (isDev || statusCode !== 500)
-    ? error.message
-    : 'Terjadi kesalahan internal pada server';
+  // Pesan sistem yang dibocorkan db (Supabase/Postgres) → ganti jadi user-friendly
+  const SYSTEM_ERROR_MARKERS = /cannot|coerce|json object|does not exist|syntax error|duplicate key|violates|relation .* does not|column .* does not|PGRST|postgrest|ECONNREFUSED|ENOTFOUND|fetch failed/i;
+  const isSystemMessage = SYSTEM_ERROR_MARKERS.test(rawMessage);
 
-  // Log error ke server (gak dikirim ke client)
-  if (statusCode === 500) {
+  // 500 / pesan sistem → jangan bocor detail; kasih pesan user-friendly
+  if (isServerError || isSystemMessage) {
     request.log.error({ err: error }, 'Internal server error');
+    return reply.status(statusCode).send({
+      berhasil: false,
+      pesan: 'Oops, terjadi kendala pada server. Silakan coba lagi — kalau masih error, hubungi admin.',
+    });
   }
+
+  // Dev: kirim pesan asli supaya dev gampang debug; Prod: tetap user-friendly utk non-4xx
+  const isDev = process.env.NODE_ENV !== 'production';
+  const message = isDev ? error.message : (statusCode === 500 ? 'Terjadi kendala pada server. Coba lagi.' : error.message);
 
   reply.status(statusCode).send({
     berhasil: false,

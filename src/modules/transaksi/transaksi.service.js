@@ -112,8 +112,15 @@ export const transaksiService = {
       });
     }
 
+    // #E1b: tolak eksplisit diskon melebihi subtotal (cegah barang gratis / manipulasi).
+    // Current code clamp diam-diam ke 0 → kasir bisa 'gratisin' barang; ini harus penolakan.
+    const diskonRequest = Number(diskon_total) || 0;
+    if (diskonRequest > totalSubtotal) {
+      throw new Error(`Diskon tidak boleh melebihi total belanja. Maksimal diskon: Rp ${totalSubtotal.toLocaleString('id-ID')}`);
+    }
+
     // Diskon total customer ≤ subtotal
-    const diskon = Math.min(Number(diskon_total) || 0, totalSubtotal);
+    const diskon = Math.min(diskonRequest, totalSubtotal);
     const total = Math.max(0, totalSubtotal - diskon);
     const nominal = Number(nominal_bayar) || total;
     if (metodeDb === 'cash' && nominal < total) {
@@ -304,7 +311,8 @@ export const transaksiService = {
   },
 
   // Void Transaksi (Batal Transaksi & Stok Kembali)
-  async voidTransaksi(toko_id, id, void_by_id, { alasan_void }) {
+  // #N1: hanya pemilik transaksi (kasir yg membuatnya) ATAU owner toko yg boleh void.
+  async voidTransaksi(toko_id, id, void_by_id, { alasan_void, actorRole = 'kasir' }) {
     const { data: tx } = await supabaseAdmin
       .from('transaksi')
       .select('*, items:transaksi_item(*)')
@@ -314,6 +322,11 @@ export const transaksiService = {
 
     if (!tx) throw new Error('Transaksi tidak ditemukan');
     if (tx.status === 'void') throw new Error('Transaksi ini sudah divoid sebelumnya');
+
+    // Ownership / otorisasi void (horizontal authorization)
+    if (actorRole !== 'owner' && tx.kasir_id !== void_by_id) {
+      throw new Error('Anda hanya dapat membatalkan transaksi yang Anda buat sendiri');
+    }
 
     // 🔒 Validasi batas waktu void (24 jam)
     const txTime = new Date(tx.created_at).getTime();
@@ -337,7 +350,7 @@ export const transaksiService = {
       .maybeSingle();
 
     if (error) throw new Error('Gagal memvoid transaksi');
-    if (!data) throw new Error('Transaksi tidak ditemukan');
+    if (!txVoid) throw new Error('Transaksi tidak ditemukan');
 
     await auditLog({
       toko_id,
