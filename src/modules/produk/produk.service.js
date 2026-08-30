@@ -228,6 +228,23 @@ export const produkService = {
       updatePayload.nama = sanitizePlainText(updatePayload.nama, { field: 'Nama produk', max: 200 });
     }
 
+    // #8 Validasi stok & harga negatif di UPDATE (dulu hanya di create)
+    if (updatePayload.stok !== undefined && Number(updatePayload.stok) < 0) {
+      throw new Error('Stok tidak boleh negatif');
+    }
+    if (updatePayload.stok_minimum !== undefined && Number(updatePayload.stok_minimum) < 0) {
+      throw new Error('Stok minimum tidak boleh negatif');
+    }
+    if (updatePayload.hpp !== undefined && Number(updatePayload.hpp) < 0) {
+      throw new Error('HPP tidak boleh negatif');
+    }
+    if (payload.harga_jual_default !== undefined || payload.harga !== undefined || payload.harga_ecer !== undefined) {
+      const newPrice = Number(payload.harga_jual_default ?? payload.harga_ecer ?? payload.harga ?? 0);
+      if (Number.isNaN(newPrice) || newPrice < 1) {
+        throw new Error('Harga jual harus lebih dari 0');
+      }
+    }
+
     // Resolve satuan_dasar_id name→UUID before updating produk table
     if (updatePayload.satuan_dasar_id && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(updatePayload.satuan_dasar_id)) {
       const { data: byName } = await supabaseAdmin.from('satuan')

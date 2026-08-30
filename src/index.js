@@ -34,20 +34,24 @@ const fastify = Fastify({
 // Register CORS with explicit credentials & HTTP methods (FIX-CORS)
 await fastify.register(cors, {
   origin: (origin, cb) => {
+    // Tanpa origin (server-to-server / non-browser) atau dev → izinkan.
     if (!origin || process.env.NODE_ENV !== 'production') {
       return cb(null, true);
     }
-    const allowed = process.env.CORS_ORIGIN 
+    if (typeof origin !== 'string') return cb(null, false);
+    const allowed = process.env.CORS_ORIGIN
       ? process.env.CORS_ORIGIN.split(',').map(s => s.trim())
       : ['http://localhost:3000', 'http://localhost:5000', 'http://127.0.0.1:3000', 'http://127.0.0.1:5000', 'http://localhost:3001', 'http://localhost:3002', 'https://tokiva.biz.id', 'https://www.tokiva.biz.id', 'https://app.tokiva.biz.id'];
     if (allowed.includes(origin)) {
       return cb(null, true);
     }
-    return cb(new Error('Not allowed by CORS'), false);
+    // Origin asing → jangan lempar Error (yang bikin Fastify render 500).
+    // Return false agar @fastify/cors menolak dengan 403/blank proper.
+    return cb(null, false);
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Idempotency-Key'],
 });
 
 // Register Static File Serving for Public Assets & AI Model Checkpoints (/public/models/...)

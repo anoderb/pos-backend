@@ -10,12 +10,26 @@ export const penggunaController = {
 
   // POST /api/pengguna
   async tambah(request, reply) {
-    const { nama, email, password } = request.body || {};
+    const { nama, email, password, role } = request.body || {};
     if (!nama || !email || !password) {
       return reply.code(400).send({ berhasil: false, pesan: 'Nama, email, dan password wajib diisi' });
     }
 
-    const kasir = await penggunaService.tambahKasir(request.toko_id, { nama, email, password });
+    // #5 Enum role whitelist: hanya 'kasir' yang valid lewat endpoint ini.
+    // Role lain (admin/owner/manager/superuser) ditolak → 400, bukan 500.
+    if (role !== undefined && role !== 'kasir') {
+      return reply.code(400).send({ berhasil: false, pesan: 'Role tidak valid. Hanya "kasir" yang dapat ditambahkan' });
+    }
+
+    // Validasi email/password dasar
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return reply.code(400).send({ berhasil: false, pesan: 'Format email tidak valid' });
+    }
+    if (String(password).length < 6) {
+      return reply.code(400).send({ berhasil: false, pesan: 'Password minimal 6 karakter' });
+    }
+
+    const kasir = await penggunaService.tambahKasir(request.toko_id, { nama, email: email.trim().toLowerCase(), password });
     return reply.code(201).send(responseSukses(kasir, 'Akun kasir berhasil ditambahkan'));
   },
 
