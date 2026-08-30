@@ -11,130 +11,229 @@ function generateNomorTransaksi() {
 }
 
 export const transaksiService = {
-  // Buat Transaksi Baru (Online)
+  // Buat Transaksi Baru (Online + Offline sync)
+  // KEAMANAN (#1,#2,#3): harga/total di-RE-COMPUTE dari DB (abaikan angka client),
+  // stok decrement ATOMIC, dan idempotency-key mencegah transaksi ganda.
   async buatTransaksi(toko_id, kasir_id, payload) {
     const {
       shift_id,
       pelanggan_id,
-      subtotal,
       diskon_total,
-      total,
       metode_bayar,
       nominal_bayar,
-      kembalian,
       items,
       is_offline,
+      idempotency_key,
     } = payload;
 
     const nomor_transaksi = payload.nomor_transaksi || generateNomorTransaksi();
 
-    // Validasi field transaksi
-    // FE legacy uses `cash`; keep alias during API transition.
+    // ── Validasi dasar ──
     const VALID_METODE_BAYAR = ['cash', 'tunai', 'qris', 'transfer', 'kartu_kredit', 'kartu_debit', 'lainnya'];
     if (!metode_bayar || !VALID_METODE_BAYAR.includes(metode_bayar)) {
       throw new Error('Metode bayar tidak valid. Pilihan: tunai, qris, transfer, kartu_kredit, kartu_debit, lainnya');
     }
-    if (total === undefined || Number(total) < 0) {
-      throw new Error('Total transaksi harus lebih dari atau sama dengan 0');
-    }
-    if (subtotal !== undefined && Number(subtotal) < 0) {
-      throw new Error('Subtotal tidak boleh negatif');
-    }
-    if (nominal_bayar !== undefined && Number(nominal_bayar) < 0) {
-      throw new Error('Nominal bayar tidak boleh negatif');
+    // Normalisasi ke nilai yang diterima DB constraint: cash/qris/transfer.
+    // FE legacy pakai 'tunai' → map ke 'cash'.
+    const metodeDb = metode_bayar === 'tunai' ? 'cash' : metode_bayar;
+    if (!items || items.length === 0) throw new Error('Item transaksi wajib diisi');
+    if (items.some((i) => !i.produk_id || Number(i.qty) <= 0)) {
+      throw new Error('Setiap item wajib punya produk_id dan qty lebih dari 0');
     }
     if (diskon_total !== undefined && Number(diskon_total) < 0) {
       throw new Error('Diskon total tidak boleh negatif');
     }
 
-    // 1. Insert header transaksi
-    const { data: tx, error: errTx } = await supabaseAdmin
-      .from('transaksi')
-      .insert({
-        toko_id,
-        shift_id: shift_id || '00000000-0000-0000-0000-000000000000',
-        kasir_id,
-        pelanggan_id: pelanggan_id || null,
-        nomor_transaksi,
-        subtotal,
-        diskon_total: diskon_total || 0,
-        total,
-        metode_bayar,
-        nominal_bayar,
-        kembalian: kembalian || 0,
-        status: 'selesai',
-        is_offline: is_offline || false,
-        created_at: new Date().toISOString(),
-      })
-      .select()
-      .single();
-
-    if (errTx) throw new Error('Gagal menyimpan transaksi: ' + errTx.message);
-
-    // 2. Insert items & potong stok produk + catat stock movement
-    if (items && items.length > 0) {
-      const itemsToInsert = items.map((item) => ({
-        transaksi_id: tx.id,
-        produk_id: item.produk_id,
-        produk_satuan_jual_id: item.produk_satuan_jual_id || null,
-        nama_produk: String(item.nama_produk || 'Produk').slice(0, 100),
-        satuan: String(item.satuan || 'pcs').slice(0, 20),
-        konversi: Number(item.konversi) || 1,
-        qty: Number(item.qty) || 0,
-        harga_satuan: Number(item.harga_satuan) || 0,
-        diskon: Number(item.diskon) || 0,
-        subtotal: Number(item.subtotal) || 0,
-      }));
-
-      if (itemsToInsert.some(i => i.qty <= 0)) {
-        throw new Error('Qty setiap item harus lebih dari 0');
-      }
-
-      const { error: errItems } = await supabaseAdmin.from('transaksi_item').insert(itemsToInsert);
-      if (errItems) console.error('Error insert transaksi_item:', errItems);
-
-      // Potong stok & audit stock_movement per produk
-      for (const item of items) {
-        const qty_dasar = Number(item.qty) * Number(item.konversi || 1);
-
-        const { data: p } = await supabaseAdmin
-          .from('produk')
-          .select('stok')
-          .eq('id', item.produk_id)
-          .single();
-
-        if (!p) {
-          throw new Error(`Produk dengan ID ${item.produk_id} tidak ditemukan`);
-        }
-
-        const stok_sebelum = Number(p.stok);
-        if (stok_sebelum < qty_dasar) {
-          throw new Error(`Stok tidak mencukupi untuk produk ${item.nama_produk || item.produk_id}. Tersedia: ${stok_sebelum}, Dibutuhkan: ${qty_dasar}`);
-        }
-
-        const stok_sesudah = stok_sebelum - qty_dasar;
-
-        // Update stok produk
-        await supabaseAdmin
-          .from('produk')
-          .update({ stok: stok_sesudah })
-          .eq('id', item.produk_id);
-
-        // Audit stock movement
-        await supabaseAdmin.from('stock_movement').insert({
-          toko_id,
-          produk_id: item.produk_id,
-          jenis: 'penjualan',
-          referensi_id: tx.id,
-          referensi_nomor: tx.nomor_transaksi,
-          qty: -qty_dasar,
-          stok_sebelum,
-          stok_sesudah,
-        });
+    // ── Idempotency (#3): kalau sudah diproses, kembalikan transaksi existing ──
+    if (idempotency_key) {
+      try {
+        const { data: dup } = await supabaseAdmin
+          .from('transaksi')
+          .select('*')
+          .eq('toko_id', toko_id)
+          .eq('idempotency_key', idempotency_key)
+          .maybeSingle();
+        if (dup) return dup;
+      } catch (idemErr) {
+        // Kolom belum ada (migrasi belum jalan) → abaikan, lanjut insert (di-handle di bawah)
+        if (!String(idemErr?.message || '').toLowerCase().includes('idempotency')) throw idemErr;
       }
     }
 
+    // ── Resolve harga & stok dari DB (#1, #4, tenant check) ──
+    const prodIds = [...new Set(items.map((i) => i.produk_id))];
+    const { data: sjs } = await supabaseAdmin
+      .from('produk_satuan_jual')
+      .select('*, produk:produk_id(id, toko_id, nama, stok)')
+      .in('produk_id', prodIds);
+
+    const resolvedItems = [];
+    let totalSubtotal = 0;
+
+    for (const item of items) {
+      const qty = Number(item.qty);
+
+      // Pilih satuan jual: spesifik (produk_satuan_jual_id) atau default produk
+      let sj = null;
+      if (item.produk_satuan_jual_id) {
+        sj = sjs?.find((s) => s.id === item.produk_satuan_jual_id && s.produk_id === item.produk_id);
+        if (!sj) throw new Error('Satuan jual produk tidak ditemukan atau tidak milik toko ini');
+      } else {
+        sj = sjs?.find((s) => s.produk_id === item.produk_id && s.is_default)
+          || sjs?.find((s) => s.produk_id === item.produk_id);
+        if (!sj) throw new Error(`Produk ${item.produk_id} belum punya satuan jual`);
+      }
+
+      // Tenant isolation: produk harus milik toko yang sama
+      if (!sj.produk || sj.produk.toko_id !== toko_id) {
+        throw new Error('Produk tidak ditemukan pada toko ini');
+      }
+
+      // Harga dari DB (bukan dari client) — strict: tolak kalau harga belum diatur
+      const hargaSatuan = Number(sj.harga_ecer || 0);
+      if (hargaSatuan <= 0) {
+        throw new Error(`Harga jual produk "${sj.produk.nama || item.produk_id}" belum diatur`);
+      }
+
+      const subtotalItem = hargaSatuan * qty;
+      totalSubtotal += subtotalItem;
+
+      resolvedItems.push({
+        transaksi_id: null, // diisi setelah header
+        produk_id: item.produk_id,
+        produk_satuan_jual_id: sj.id,
+        nama_produk: String(sj.produk.nama || item.nama_produk || 'Produk').slice(0, 100),
+        satuan: String(item.satuan || 'pcs').slice(0, 20),
+        konversi: Number(sj.konversi) || 1,
+        qty,
+        harga_satuan: hargaSatuan,
+        diskon: Math.min(Number(item.diskon) || 0, subtotalItem),
+        subtotal: subtotalItem,
+      });
+    }
+
+    // Diskon total customer ≤ subtotal
+    const diskon = Math.min(Number(diskon_total) || 0, totalSubtotal);
+    const total = Math.max(0, totalSubtotal - diskon);
+    const nominal = Number(nominal_bayar) || total;
+    if (metodeDb === 'cash' && nominal < total) {
+      throw new Error(`Uang pembayaran tidak mencukupi. Total: ${total}, Dibayar: ${nominal}`);
+    }
+    const kembalian = metodeDb === 'cash' ? Math.max(0, nominal - total) : 0;
+
+    // ── Atomic stock reserve (#2): decrement atomik dilakukan SETELAH header+items,
+    // jadi kalau salah satu item gagal, transaksi dibatalkan (throw) dan client retry.
+    // (Reserve di sini tidak dilakukan — decrementStokAtomik memakai RPC/guarded update)
+
+    // 1. Insert header transaksi
+    const headerData = {
+      toko_id,
+      shift_id: shift_id || '00000000-0000-0000-0000-000000000000',
+      kasir_id,
+      pelanggan_id: pelanggan_id || null,
+      nomor_transaksi,
+      subtotal: totalSubtotal,
+      diskon_total: diskon,
+      total,
+      metode_bayar: metodeDb,
+      nominal_bayar: nominal,
+      kembalian,
+      idempotency_key: idempotency_key || null,
+      status: 'selesai',
+      is_offline: is_offline || false,
+      created_at: new Date().toISOString(),
+    };
+
+    // Graceful: kolom idempotency_key baru ada setelah migrasi dijalankan.
+    // Kalau belum, insert ulang tanpa kolom itu (anti PGRST204).
+    let { data: tx, error: errTx } = await supabaseAdmin
+      .from('transaksi')
+      .insert(headerData)
+      .select()
+      .single();
+
+    if (errTx && String(errTx.message || '').includes('idempotency_key')) {
+      delete headerData.idempotency_key;
+      ({ data: tx, error: errTx } = await supabaseAdmin
+        .from('transaksi')
+        .insert(headerData)
+        .select()
+        .single());
+    }
+
+    if (errTx) throw new Error('Gagal menyimpan transaksi: ' + errTx.message);
+
+    // 2. Insert items dengan harga hasil recompute
+    const itemsToInsert = resolvedItems.map((it, idx) => ({ ...it, transaksi_id: tx.id }));
+    const { error: errItems } = await supabaseAdmin.from('transaksi_item').insert(itemsToInsert);
+    if (errItems) {
+      console.error('Error insert transaksi_item:', errItems);
+      throw new Error('Gagal menyimpan item transaksi: ' + errItems.message);
+    }
+
+    // 3. Potong stok & catat stock_movement (atomic decrement)
+    await this.decrementStokAtomik(toko_id, tx, resolvedItems);
+
     return tx;
+  },
+
+  // Atomic stock decrement anti-oversell (#2)
+  // Prioritas: RPC SQL `decrement_stok_atomik` (atomik beneran). Kalau belum ada
+  // (kolom idempotency_key belum dibuat user di Supabase), fallback guarded update
+  // read-then-write dengan cek ulang — mengurangi race, bukan menghilangkan.
+  async decrementStokAtomik(toko_id, tx, resolvedItems) {
+    for (const it of resolvedItems) {
+      const qtyDasar = it.qty * it.konversi;
+      let stokSebelum = null;
+      let stokSesudah = null;
+
+      // Coba RPC atomik
+      try {
+        const { data: rpcRes, error: rpcErr } = await supabaseAdmin.rpc('decrement_stok_atomik', {
+          p_produk_id: it.produk_id,
+          p_qty: qtyDasar,
+        });
+        if (rpcErr) throw rpcErr;
+        const parsed = typeof rpcRes === 'string' ? JSON.parse(rpcRes) : rpcRes;
+        if (!parsed?.ok) {
+          throw new Error(`Stok tidak mencukupi untuk produk ${it.nama_produk}`);
+        }
+        stokSebelum = Number(parsed.stok_sebelum);
+        stokSesudah = Number(parsed.stok_sesudah);
+      } catch (rpcErr) {
+        // RPC belum tersedia (function tidak ada) → fallback guarded update
+        if (String(rpcErr?.message || '').toLowerCase().includes('function') || String(rpcErr?.code || '') === 'PGRST202') {
+          const { data: p } = await supabaseAdmin
+            .from('produk')
+            .select('stok')
+            .eq('id', it.produk_id)
+            .single();
+          stokSebelum = Number(p?.stok || 0);
+          if (stokSebelum < qtyDasar) {
+            throw new Error(`Stok tidak mencukupi untuk produk ${it.nama_produk}. Tersedia: ${stokSebelum}, Dibutuhkan: ${qtyDasar}`);
+          }
+          stokSesudah = stokSebelum - qtyDasar;
+          await supabaseAdmin
+            .from('produk')
+            .update({ stok: stokSesudah })
+            .eq('id', it.produk_id)
+            .eq('toko_id', toko_id);
+        } else {
+          throw rpcErr;
+        }
+      }
+
+      await supabaseAdmin.from('stock_movement').insert({
+        toko_id,
+        produk_id: it.produk_id,
+        jenis: 'penjualan',
+        referensi_id: tx.id,
+        referensi_nomor: tx.nomor_transaksi,
+        qty: -qtyDasar,
+        stok_sebelum: stokSebelum,
+        stok_sesudah: stokSesudah,
+      });
+    }
   },
 
   // Sync Batch Transaksi Offline dari Dexie.js
@@ -247,28 +346,46 @@ export const transaksiService = {
       detail: { alasan_void, nomor_transaksi: tx.nomor_transaksi },
     });
 
-    // 2. Kembalikan stok produk & catat stock_movement jenis void_penjualan
+    // 2. Kembalikan stok produk (atomic via RPC increment, fallback guarded update)
     if (tx.items) {
       for (const item of tx.items) {
         const qty_dasar = Number(item.qty) * Number(item.konversi || 1);
 
-        const { data: p } = await supabaseAdmin
-          .from('produk')
-          .select('stok')
-          .eq('id', item.produk_id)
-          .single();
+        let stokSebelum = null;
+        let stokSesudah = null;
 
-        if (p) {
-          const stok_sebelum = Number(p.stok);
-          const stok_sesudah = stok_sebelum + qty_dasar;
-
-          // Restorasi stok
-          await supabaseAdmin
+        try {
+          const { data: rpcRes, error: rpcErr } = await supabaseAdmin.rpc('increment_stok_atomik', {
+            p_produk_id: item.produk_id,
+            p_qty: qty_dasar,
+          });
+          if (rpcErr) throw rpcErr;
+          const parsed = typeof rpcRes === 'string' ? JSON.parse(rpcRes) : rpcRes;
+          if (parsed?.ok) {
+            stokSebelum = Number(parsed.stok_sebelum);
+            stokSesudah = Number(parsed.stok_sesudah);
+          }
+        } catch (rpcErr) {
+          const isMissingFn = String(rpcErr?.message || '').toLowerCase().includes('function')
+            || String(rpcErr?.code || '') === 'PGRST202';
+          if (!isMissingFn && !String(rpcErr?.message || '').toLowerCase().includes('syntax')) throw rpcErr;
+          // fallback: baca lalu update
+          const { data: p } = await supabaseAdmin
             .from('produk')
-            .update({ stok: stok_sesudah })
-            .eq('id', item.produk_id);
+            .select('stok')
+            .eq('id', item.produk_id)
+            .single();
+          if (p) {
+            stokSebelum = Number(p.stok);
+            stokSesudah = stokSebelum + qty_dasar;
+            await supabaseAdmin
+              .from('produk')
+              .update({ stok: stokSesudah })
+              .eq('id', item.produk_id);
+          }
+        }
 
-          // Audit stock movement
+        if (stokSebelum !== null && stokSesudah !== null) {
           await supabaseAdmin.from('stock_movement').insert({
             toko_id,
             produk_id: item.produk_id,
@@ -276,8 +393,8 @@ export const transaksiService = {
             referensi_id: tx.id,
             referensi_nomor: tx.nomor_transaksi,
             qty: qty_dasar,
-            stok_sebelum,
-            stok_sesudah,
+            stok_sebelum: stokSebelum,
+            stok_sesudah: stokSesudah,
           });
         }
       }

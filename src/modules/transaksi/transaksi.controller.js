@@ -5,12 +5,13 @@ import { supabaseAdmin } from '../../config/database.js';
 export const transaksiController = {
   // POST /api/transaksi
   async buat(request, reply) {
-    const { subtotal, total, metode_bayar, nominal_bayar, items } = request.body || {};
-    if ((!total && !subtotal) || !metode_bayar || !items || items.length === 0) {
-      return reply.code(400).send({
-        berhasil: false,
-        pesan: 'total / subtotal, metode_bayar, dan items wajib diisi',
-      });
+    const { subtotal, metode_bayar, items } = request.body || {};
+
+    // #3 Idempotency: gunakan header Idempotency-Key (UUID wajib) untuk anti-replay
+    const idempotencyKey = request.headers?.['idempotency-key'] || request.body?.idempotency_key || null;
+    const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (idempotencyKey && !UUID_REGEX.test(idempotencyKey)) {
+      return reply.code(400).send({ berhasil: false, pesan: 'Idempotency-Key harus berupa UUID yang valid' });
     }
 
     // Shift ditentukan dan divalidasi server-side. Client tidak boleh memilih
@@ -42,39 +43,29 @@ export const transaksiController = {
 
     const finalShiftId = activeShift.id;
 
-    const calculatedSubtotal = subtotal || items.reduce((s, i) => s + (Number(i.subtotal) || Number(i.harga_satuan) * Number(i.qty) || 0), 0);
-    const calculatedTotal = total || Math.max(0, calculatedSubtotal - (Number(request.body.diskon_total) || 0));
-
-    if (calculatedTotal < 0) {
+    // #1 Recompute: harga/total TIDAK diambil dari client — dihitung di service
+    // dari produk_satuan_jual di DB. subtotal disini hanya pembungkus agar FE lama
+    // yang wajib kirim total/subtotal tidak error; nilai aslinya diabaikan.
+    if (!metode_bayar || !items || items.length === 0) {
       return reply.code(400).send({
         berhasil: false,
-        pesan: 'Total transaksi tidak boleh negatif',
+        pesan: 'metode_bayar dan items wajib diisi',
       });
     }
-
-    const nominal = nominal_bayar || calculatedTotal;
-    if (metode_bayar === 'cash' && Number(nominal) < calculatedTotal) {
-      return reply.code(400).send({
-        berhasil: false,
-        pesan: `Uang pembayaran tidak mencukupi. Total: ${calculatedTotal}, Dibayar: ${nominal}`,
-      });
-    }
-
-    const kembalianValue = metode_bayar === 'cash'
-      ? Math.max(0, Number(nominal) - calculatedTotal)
-      : 0;
+    void subtotal;
 
     const payload = {
       ...request.body,
       shift_id: finalShiftId,
-      subtotal: calculatedSubtotal,
-      total: calculatedTotal,
-      nominal_bayar: nominal,
-      kembalian: kembalianValue,
+      idempotency_key: idempotencyKey || undefined,
     };
 
-    const tx = await transaksiService.buatTransaksi(request.toko_id, request.pengguna.id, payload);
-    return reply.code(201).send(responseSukses(tx, 'Transaksi berhasil disimpan'));
+    try {
+      const tx = await transaksiService.buatTransaksi(request.toko_id, request.pengguna.id, payload);
+      return reply.code(201).send(responseSukses(tx, 'Transaksi berhasil disimpan'));
+    } catch (err) {
+      return reply.code(400).send({ berhasil: false, pesan: err.message });
+    }
   },
 
   // POST /api/transaksi/sync-offline
