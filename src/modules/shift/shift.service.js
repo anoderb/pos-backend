@@ -188,7 +188,7 @@ export const shiftService = {
       .maybeSingle();
 
     if (error) throw new Error('Gagal menutup shift: ' + error.message);
-    if (!data) throw new Error('Shift tidak ditemukan');
+    if (!shiftClosed) throw new Error('Shift tidak ditemukan');
     return shiftClosed;
   },
 
