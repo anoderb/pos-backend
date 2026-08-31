@@ -4,12 +4,7 @@ import { penggunaController } from '../../modules/pengguna/pengguna.controller.j
 import { produkController } from '../../modules/produk/produk.controller.js';
 import { kategoriController } from '../../modules/kategori/kategori.controller.js';
 import { satuanController } from '../../modules/satuan/satuan.controller.js';
-import { supplierController } from '../../modules/supplier/supplier.controller.js';
-import { hutangController } from '../../modules/hutang/hutang.controller.js';
-import { returnSupplierController } from '../../modules/return-supplier/return-supplier.controller.js';
-import { konsinyasiController } from '../../modules/konsinyasi/konsinyasi.controller.js';
 import { stockAdjustmentController } from '../../modules/stock-adjustment/stock-adjustment.controller.js';
-import { opnameController } from '../../modules/opname/opname.controller.js';
 import { tokoController } from '../../modules/toko/toko.controller.js';
 import { shiftController } from '../../modules/shift/shift.controller.js';
 import { qrisController } from '../../modules/qris/qris.controller.js';
@@ -29,14 +24,7 @@ export async function ownerRoutes(fastify, options) {
   fastify.get('/laporan/ringkasan', ownerTag('Ringkasan Laporan Keuangan'), laporanController.ringkasan);
   fastify.get('/laporan/riwayat', ownerTag('Riwayat Transaksi Terbaru'), laporanController.riwayat);
   fastify.get('/laporan/pending', ownerTag('Daftar Transaksi QRIS Pending'), laporanController.pendingQris);
-  fastify.get('/laporan/penjualan/export', ownerTag('Export Data Penjualan (Excel/PDF)'), laporanController.exportPenjualan);
   fastify.get('/laporan/stok', ownerTag('Laporan Inventori & Nilai Stok'), laporanController.stok);
-  fastify.get('/laporan/stok/export', ownerTag('Export Data Stok (Excel/PDF)'), laporanController.exportStok);
-  fastify.get('/laporan/pembelian', ownerTag('Laporan Pembelian Nota Masuk'), laporanController.pembelian);
-  fastify.get('/laporan/pembelian/export', ownerTag('Export Data Pembelian (Excel/PDF)'), laporanController.exportPembelian);
-  fastify.get('/laporan/shift', ownerTag('Laporan Rekap Seluruh Shift Kasir'), laporanController.shift);
-  fastify.get('/laporan/shift/export', ownerTag('Export Data Shift Kasir (Excel/PDF)'), laporanController.exportShift);
-  fastify.get('/laporan/laba-rugi', ownerTag('Estimasi Laporan Laba Rugi'), laporanController.labaRugi);
 
   // --- Kelola Staf Kasir / Pengguna ---
   fastify.get('/pengguna', ownerTag('List Akun Kasir Toko'), penggunaController.list);
@@ -61,11 +49,6 @@ export async function ownerRoutes(fastify, options) {
   fastify.put('/produk/:id/satuan-jual/:sid', ownerTag('Edit Satuan Jual'), produkController.updateSatuanJual);
   fastify.delete('/produk/:id/satuan-jual/:sid', ownerTag('Hapus Satuan Jual'), produkController.hapusSatuanJual);
 
-  fastify.get('/produk/:id/satuan-beli', ownerTag('List Satuan Beli Supplier'), produkController.listSatuanBeli);
-  fastify.post('/produk/:id/satuan-beli', ownerTag('Tambah Satuan Beli Supplier'), produkController.tambahSatuanBeli);
-  fastify.put('/produk/:id/satuan-beli/:sid', ownerTag('Edit Satuan Beli'), produkController.updateSatuanBeli);
-  fastify.delete('/produk/:id/satuan-beli/:sid', ownerTag('Hapus Satuan Beli'), produkController.hapusSatuanBeli);
-
   // Kategori & Satuan CRUD
   fastify.get('/kategori', ownerTag('List Kategori Toko'), kategoriController.list);
   fastify.post('/kategori', ownerTag('Tambah Kategori Baru'), kategoriController.tambah);
@@ -77,41 +60,9 @@ export async function ownerRoutes(fastify, options) {
   fastify.put('/satuan/:id', ownerTag('Edit Satuan Custom'), satuanController.update);
   fastify.delete('/satuan/:id', ownerTag('Hapus Satuan Custom'), satuanController.hapus);
 
-  // --- Master Supplier & Hutang ---
-  fastify.get('/supplier', ownerTag('List Supplier Toko'), supplierController.list);
-  fastify.post('/supplier', ownerTag('Tambah Supplier Baru'), supplierController.tambah);
-  fastify.get('/supplier/:id', ownerTag('Detail Supplier'), supplierController.detail);
-  fastify.get('/supplier/:id/hutang', ownerTag('Rekap Hutang Supplier Ini'), supplierController.getHutang);
-  fastify.put('/supplier/:id', ownerTag('Edit Data Supplier'), supplierController.update);
-  fastify.delete('/supplier/:id', ownerTag('Soft Delete Supplier'), supplierController.delete);
-
-  fastify.get('/hutang', ownerTag('List Semua Hutang Supplier Aktif'), hutangController.list);
-  fastify.post('/hutang/:nota_id/bayar', ownerTag('Catat Pembayaran Hutang Supplier'), hutangController.bayar);
-  fastify.get('/hutang/:nota_id/histori', ownerTag('Histori Pembayaran Hutang Nota Ini'), hutangController.histori);
-
-  // --- Return Supplier ---
-  fastify.get('/return-supplier', ownerTag('List Return Supplier'), returnSupplierController.list);
-  fastify.post('/return-supplier', ownerTag('Buat Return Supplier Baru'), returnSupplierController.buat);
-  fastify.get('/return-supplier/:id', ownerTag('Detail Return Supplier'), returnSupplierController.detail);
-
-  // --- Konsinyasi ---
-  fastify.get('/konsinyasi', ownerTag('List Konsinyasi Titip Jual'), konsinyasiController.list);
-  fastify.post('/konsinyasi', ownerTag('Terima Barang Konsinyasi Baru'), konsinyasiController.terima);
-  fastify.get('/konsinyasi/:id', ownerTag('Detail Barang Konsinyasi'), konsinyasiController.detail);
-  fastify.post('/konsinyasi/:id/kembali', ownerTag('Kembalikan Barang Konsinyasi Tak Terjual'), konsinyasiController.kembali);
-  fastify.post('/konsinyasi/:id/bayar', ownerTag('Settlement Pembayaran Konsinyasi'), konsinyasiController.bayar);
-
   // --- Stock Adjustment ---
   fastify.get('/stock-adjustment', ownerTag('List Stock Adjustment Manual'), stockAdjustmentController.list);
   fastify.post('/stock-adjustment', ownerTag('Buat Stock Adjustment Manual (+/-)'), stockAdjustmentController.buat);
-
-  // --- Stock Opname Workflow 3 Tahap ---
-  fastify.get('/opname', ownerTag('List Stock Opname Audit'), opnameController.list);
-  fastify.post('/opname', ownerTag('1. Buat Opname Baru (Draft)'), opnameController.buat);
-  fastify.get('/opname/:id', ownerTag('Detail Opname Audit'), opnameController.detail);
-  fastify.put('/opname/:id/item/:pid', ownerTag('2. Update Stok Fisik Per Produk'), opnameController.updateItem);
-  fastify.post('/opname/:id/review', ownerTag('3. Ubah Status Ke Review Selisih'), opnameController.review);
-  fastify.post('/opname/:id/final', ownerTag('4. Finalize Opname (Update Stok Massal)'), opnameController.finalize);
 
   // --- Shift Logs Owner ---
   fastify.get('/shift', ownerTag('List Log Seluruh Shift Toko'), shiftController.list);

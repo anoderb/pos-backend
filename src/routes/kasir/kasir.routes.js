@@ -3,7 +3,6 @@ import { transaksiController } from '../../modules/transaksi/transaksi.controlle
 import { shiftController } from '../../modules/shift/shift.controller.js';
 import { produkController } from '../../modules/produk/produk.controller.js';
 import { pelangganController } from '../../modules/pelanggan/pelanggan.controller.js';
-import { notaMasukController } from '../../modules/nota-masuk/nota-masuk.controller.js';
 import { aiController } from '../../modules/ai/ai.controller.js';
 import { kategoriController } from '../../modules/kategori/kategori.controller.js';
 import { satuanController } from '../../modules/satuan/satuan.controller.js';
@@ -45,11 +44,6 @@ export async function kasirRoutes(fastify, options) {
   fastify.post('/pelanggan', { schema: { tags: ['Kasir Operations (/api/kasir)'], summary: 'Tambah Pelanggan Baru' } }, pelangganController.tambah);
   fastify.get('/pelanggan/:id', { schema: { tags: ['Kasir Operations (/api/kasir)'], summary: 'Detail Pelanggan' } }, pelangganController.detail);
   fastify.put('/pelanggan/:id', { schema: { tags: ['Kasir Operations (/api/kasir)'], summary: 'Edit Data Pelanggan' } }, pelangganController.update);
-
-  // --- Nota Masuk Pembelian & Upload Foto ---
-  fastify.get('/nota-masuk', { schema: { tags: ['Kasir Operations (/api/kasir)'], summary: 'List Nota Masuk Pembelian' } }, notaMasukController.list);
-  fastify.post('/nota-masuk', { schema: { tags: ['Kasir Operations (/api/kasir)'], summary: 'Buat Nota Masuk Baru' } }, notaMasukController.buat);
-  fastify.get('/nota-masuk/:id', { schema: { tags: ['Kasir Operations (/api/kasir)'], summary: 'Detail Nota Masuk' } }, notaMasukController.detail);
 
   // --- Koreksi AI Scanner ---
   fastify.get('/ai/active-model', { schema: { tags: ['Kasir Operations (/api/kasir)'], summary: 'Get Model AI Aktif & Barcode Mapping' } }, aiController.getActiveModel);

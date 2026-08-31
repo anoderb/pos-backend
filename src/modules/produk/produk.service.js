@@ -198,9 +198,7 @@ export const produkService = {
         *,
         kategori:kategori_id(nama),
         satuan_dasar:satuan_dasar_id(nama),
-        satuan_jual:produk_satuan_jual(*, satuan:satuan_id(nama)),
-        satuan_beli:produk_satuan_beli(*, satuan:satuan_id(nama)),
-        supplier:produk_supplier(*, supplier:supplier_id(nama))
+        satuan_jual:produk_satuan_jual(*, satuan:satuan_id(nama))
       `)
       .eq('toko_id', toko_id)
       .eq('id', id)
@@ -476,64 +474,4 @@ export const produkService = {
     return data;
   },
 
-  // --- SUB-MODULE SATUAN BELI ---
-  async listSatuanBeli(toko_id, produk_id) {
-    await assertProductTenant(toko_id, produk_id);
-    const { data, error } = await supabaseAdmin
-      .from('produk_satuan_beli')
-      .select('*, satuan:satuan_id(nama)')
-      .eq('produk_id', produk_id);
-    if (error) throw new Error('Gagal mengambil satuan beli');
-    return data;
-  },
-
-  async tambahSatuanBeli(toko_id, produk_id, payload) {
-    await assertProductTenant(toko_id, produk_id);
-    const clean = { ...payload };
-    delete clean.id;
-    delete clean.produk_id;
-    delete clean.created_at;
-
-    const { data, error } = await supabaseAdmin
-      .from('produk_satuan_beli')
-      .insert({ produk_id, ...clean })
-      .select()
-      .single();
-    if (error) throw new Error('Gagal menambah satuan beli: ' + error.message);
-    return data;
-  },
-
-  async updateSatuanBeli(toko_id, produk_id, sid, payload) {
-    await assertProductTenant(toko_id, produk_id);
-    const clean = { ...payload };
-    delete clean.id;
-    delete clean.produk_id;
-    delete clean.created_at;
-    delete clean.updated_at;
-
-    const { data, error } = await supabaseAdmin
-      .from('produk_satuan_beli')
-      .update(clean)
-      .eq('produk_id', produk_id)
-      .eq('id', sid)
-      .select()
-      .maybeSingle();
-    if (error) throw new Error('Gagal memperbarui satuan beli: ' + error.message);
-    if (!data) throw new Error('Satuan beli tidak ditemukan');
-    return data;
-  },
-
-  async hapusSatuanBeli(toko_id, produk_id, sid) {
-    await assertProductTenant(toko_id, produk_id);
-    const { data, error } = await supabaseAdmin
-      .from('produk_satuan_beli')
-      .delete()
-      .eq('produk_id', produk_id)
-      .eq('id', sid)
-      .select()
-      .maybeSingle();
-    if (error) throw new Error('Gagal menghapus satuan beli');
-    if (!data) throw new Error('Satuan beli tidak ditemukan');
-    return data;
-  },
 };

@@ -76,24 +76,4 @@ export const produkController = {
     return reply.send(responseSukses(data, 'Satuan jual berhasil dihapus'));
   },
 
-  // Satuan Beli
-  async listSatuanBeli(request, reply) {
-    const data = await produkService.listSatuanBeli(request.toko_id, request.params.id);
-    return reply.send(responseSukses(data, 'Daftar satuan beli produk'));
-  },
-
-  async tambahSatuanBeli(request, reply) {
-    const data = await produkService.tambahSatuanBeli(request.toko_id, request.params.id, request.body || {});
-    return reply.code(201).send(responseSukses(data, 'Satuan beli berhasil ditambahkan'));
-  },
-
-  async updateSatuanBeli(request, reply) {
-    const data = await produkService.updateSatuanBeli(request.toko_id, request.params.id, request.params.sid, request.body || {});
-    return reply.send(responseSukses(data, 'Satuan beli berhasil diperbarui'));
-  },
-
-  async hapusSatuanBeli(request, reply) {
-    const data = await produkService.hapusSatuanBeli(request.toko_id, request.params.id, request.params.sid);
-    return reply.send(responseSukses(data, 'Satuan beli berhasil dihapus'));
-  },
 };
