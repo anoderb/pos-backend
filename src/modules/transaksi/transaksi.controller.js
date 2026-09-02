@@ -95,16 +95,10 @@ export const transaksiController = {
   // POST /api/transaksi/:id/qris/approve
   async approveQris(request, reply) {
     const { alasan } = request.body || {};
-    try {
-      const tx = await transaksiService.approveTransaksiQris(
-        request.toko_id, request.params.id, request.pengguna.id, request.pengguna.role, { alasan }
-      );
-      return reply.send(responseSukses(tx, 'Pembayaran QRIS disetujui'));
-    } catch (err) {
-      const msg = String(err.message || '');
-      const status = msg.includes('dibuat sendiri') ? 403 : 400;
-      return reply.code(status).send({ berhasil: false, pesan: msg });
-    }
+    const tx = await transaksiService.approveTransaksiQris(
+      request.toko_id, request.params.id, request.pengguna.id, request.pengguna.role, { alasan }
+    );
+    return reply.send(responseSukses(tx, 'Pembayaran QRIS disetujui'));
   },
 
   // POST /api/transaksi/:id/qris/cancel — wajib isi alasan
@@ -113,16 +107,10 @@ export const transaksiController = {
     if (!alasan || !String(alasan).trim()) {
       return reply.code(400).send({ berhasil: false, pesan: 'Alasan pembatalan wajib diisi' });
     }
-    try {
-      const tx = await transaksiService.cancelTransaksiQris(
-        request.toko_id, request.params.id, request.pengguna.id, request.pengguna.role, { alasan: String(alasan).trim() }
-      );
-      return reply.send(responseSukses(tx, 'Transaksi QRIS dibatalkan'));
-    } catch (err) {
-      const msg = String(err.message || '');
-      const status = msg.includes('dibuat sendiri') ? 403 : 400;
-      return reply.code(status).send({ berhasil: false, pesan: msg });
-    }
+    const tx = await transaksiService.cancelTransaksiQris(
+      request.toko_id, request.params.id, request.pengguna.id, request.pengguna.role, { alasan: String(alasan).trim() }
+    );
+    return reply.send(responseSukses(tx, 'Transaksi QRIS dibatalkan'));
   },
 
   // POST /api/transaksi/:id/void
@@ -131,21 +119,12 @@ export const transaksiController = {
     if (!alasan_void) {
       return reply.code(400).send({ berhasil: false, pesan: 'Alasan void wajib diisi' });
     }
-
-    try {
-      const tx = await transaksiService.voidTransaksi(
-        request.toko_id,
-        request.params.id,
-        request.pengguna.id,
-        { alasan_void, actorRole: request.pengguna.role }
-      );
-      return reply.send(responseSukses(tx, 'Transaksi berhasil divoid'));
-    } catch (err) {
-      const msg = String(err.message || '');
-      if (msg.includes('hanya dapat membatalkan') || msg.toLowerCase().includes('sendiri')) {
-        return reply.code(403).send({ berhasil: false, pesan: msg });
-      }
-      return reply.code(400).send({ berhasil: false, pesan: msg });
-    }
+    const tx = await transaksiService.voidTransaksi(
+      request.toko_id,
+      request.params.id,
+      request.pengguna.id,
+      { alasan_void, actorRole: request.pengguna.role }
+    );
+    return reply.send(responseSukses(tx, 'Transaksi berhasil divoid'));
   },
 };

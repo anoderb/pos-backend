@@ -1,5 +1,6 @@
 import { supabaseAdmin } from '../../config/database.js';
 import { validateQRIS, parseQRIS, convertQRIS } from '../../utils/qris-utils.mjs';
+import { httpError } from '../../utils/errors.js';
 
 function qrisUserError() {
   return new Error('Barcode QRIS tidak valid atau tidak lengkap. Silakan upload ulang foto QRIS statis asli dari penyedia pembayaran.');
@@ -16,8 +17,8 @@ export const qrisService = {
       .eq('id', toko_id)
       .maybeSingle();
     if (tokoError) throw new Error('Gagal memeriksa data toko');
-    if (!toko) throw new Error('Data toko tidak ditemukan');
-    if (toko.owner_id !== owner_id) throw new Error('Anda tidak memiliki akses untuk mengubah toko ini');
+    if (!toko) throw httpError(404, 'Data toko tidak ditemukan');
+    if (toko.owner_id !== owner_id) throw httpError(403, 'Anda tidak memiliki akses untuk mengubah toko ini');
 
     if (!clean) {
       const { error } = await supabaseAdmin

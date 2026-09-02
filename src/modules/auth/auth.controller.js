@@ -55,13 +55,9 @@ export const authController = {
       return reply.code(429).send({ berhasil: false, pesan: `Terlalu banyak pendaftaran. Coba lagi dalam ${sisaWaktuLock(remain)}.` });
     }
 
-    try {
-      const hasil = await authService.registerOwner({ nama, email, password, nama_toko, alamat_toko, no_telp_toko });
-      recordAttempt(rKey, REGISTER_TIERS);
-      return reply.code(201).send(responseSukses(hasil, 'Registrasi Owner berhasil disimpan'));
-    } catch (err) {
-      return reply.code(400).send({ berhasil: false, pesan: err.message });
-    }
+    const hasil = await authService.registerOwner({ nama, email, password, nama_toko, alamat_toko, no_telp_toko });
+    recordAttempt(rKey, REGISTER_TIERS);
+    return reply.code(201).send(responseSukses(hasil, 'Registrasi Owner berhasil disimpan'));
   },
 
   async login(request, reply) {
@@ -93,13 +89,9 @@ export const authController = {
   },
 
   async verifikasiEmail(request, reply) {
-    try {
-      const { email } = request.body || {};
-      const hasil = await authService.kirimVerifikasiEmail(email);
-      return reply.send(responseSukses(hasil, 'Email verifikasi dikirim'));
-    } catch (err) {
-      return reply.code(400).send({ berhasil: false, pesan: err.message });
-    }
+    const { email } = request.body || {};
+    const hasil = await authService.kirimVerifikasiEmail(email);
+    return reply.send(responseSukses(hasil, 'Email verifikasi dikirim'));
   },
 
   // Konfirmasi verifikasi email (Model B) — POST /auth/verif {email, code}
@@ -127,12 +119,8 @@ export const authController = {
     const { email } = request.body || {};
     if (!email) return reply.code(400).send({ berhasil: false, pesan: 'Email wajib diisi' });
 
-    try {
-      const hasil = await authService.lupaPassword(email);
-      return reply.send(responseSukses(hasil, hasil.pesan));
-    } catch (err) {
-      return reply.code(400).send({ berhasil: false, pesan: err.message });
-    }
+    const hasil = await authService.lupaPassword(email);
+    return reply.send(responseSukses(hasil, hasil.pesan));
   },
 
   async resetPassword(request, reply) {
@@ -155,12 +143,8 @@ export const authController = {
       return reply.code(400).send({ berhasil: false, pesan: 'Email wajib diisi' });
     }
 
-    try {
-      const hasil = await authService.resetPassword({ email });
-      return reply.send(responseSukses(hasil, hasil.pesan));
-    } catch (err) {
-      return reply.code(400).send({ berhasil: false, pesan: err.message });
-    }
+    const hasil = await authService.resetPassword({ email });
+    return reply.send(responseSukses(hasil, hasil.pesan));
   },
 
   async gantiPassword(request, reply) {
@@ -172,12 +156,8 @@ export const authController = {
       return reply.code(400).send({ berhasil: false, pesan: 'Password baru wajib diisi' });
     }
 
-    try {
-      const hasil = await authService.gantiPassword(request.pengguna.email, old_password, new_password);
-      return reply.send(responseSukses(hasil, hasil.pesan));
-    } catch (err) {
-      return reply.code(400).send({ berhasil: false, pesan: err.message });
-    }
+    const hasil = await authService.gantiPassword(request.pengguna.email, old_password, new_password);
+    return reply.send(responseSukses(hasil, hasil.pesan));
   },
 
   async refresh(request, reply) {
@@ -231,15 +211,11 @@ export const authController = {
   },
 
   async profil(request, reply) {
-    try {
-      const profil = await authService.getProfil(request.pengguna.email);
-      return reply.send(responseSukses({
-        pengguna: serializeUser(profil),
-        toko: serializeToko(profil?.toko),
-      }, 'Data profil pengguna'));
-    } catch (err) {
-      return reply.code(400).send({ berhasil: false, pesan: 'Gagal mengambil profil' });
-    }
+    const profil = await authService.getProfil(request.pengguna.email);
+    return reply.send(responseSukses({
+      pengguna: serializeUser(profil),
+      toko: serializeToko(profil?.toko),
+    }, 'Data profil pengguna'));
   },
 
   async logout(request, reply) {
