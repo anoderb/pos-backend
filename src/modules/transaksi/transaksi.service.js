@@ -1,5 +1,6 @@
 import { supabaseAdmin } from '../../config/database.js';
 import { auditLog } from '../../utils/audit.js';
+import { httpError } from '../../utils/errors.js';
 import { qrisService } from '../qris/qris.service.js';
 import { parseQRIS, validateQRIS } from '../../utils/qris-utils.mjs';
 
@@ -229,7 +230,7 @@ export const transaksiService = {
       throw new Error('Hanya transaksi QRIS berstatus pending yang dapat di-approve');
     }
     if (actorRole !== 'owner' && tx.kasir_id !== actor_id) {
-      throw new Error('Anda hanya dapat meng-approve transaksi yang Anda buat sendiri');
+      throw httpError(403, 'Anda hanya dapat meng-approve transaksi yang Anda buat sendiri');
     }
 
     // Ambil items utk potong stok
@@ -246,6 +247,12 @@ export const transaksiService = {
       subtotal: it.subtotal,
     }));
 
+    // H2: potong stok DULU (atomik) — kalau ada item stok kurang → throw,
+    // status tetap pending, client boleh retry. Update status menyusul.
+    if (resolved.length > 0) {
+      await this.decrementStokAtomik(toko_id, tx, resolved);
+    }
+
     // Update status
     const { data: updated, error } = await supabaseAdmin
       .from('transaksi')
@@ -260,11 +267,6 @@ export const transaksiService = {
       .select()
       .maybeSingle();
     if (error || !updated) throw new Error('Gagal meng-approve transaksi');
-
-    // Potong stok
-    if (resolved.length > 0) {
-      await this.decrementStokAtomik(toko_id, updated, resolved);
-    }
     return updated;
   },
 
@@ -281,7 +283,7 @@ export const transaksiService = {
       throw new Error('Hanya transaksi QRIS berstatus pending yang dapat dibatalkan');
     }
     if (actorRole !== 'owner' && tx.kasir_id !== actor_id) {
-      throw new Error('Anda hanya dapat membatalkan transaksi yang Anda buat sendiri');
+      throw httpError(403, 'Anda hanya dapat membatalkan transaksi yang Anda buat sendiri');
     }
 
     const { data: updated, error } = await supabaseAdmin
@@ -438,10 +440,15 @@ export const transaksiService = {
 
     if (!tx) throw new Error('Transaksi tidak ditemukan');
     if (tx.status === 'void') throw new Error('Transaksi ini sudah divoid sebelumnya');
+    // H1: transaksi QRIS pending tidak boleh di-void — stok belum dipotong,
+    // void akan men-restore stok yang tidak pernah dipotong (inflate).
+    if (tx.status === 'pending') {
+      throw httpError(409, 'Transaksi QRIS pending harus dibatalkan via QRIS cancel, bukan void');
+    }
 
     // Ownership / otorisasi void (horizontal authorization)
     if (actorRole !== 'owner' && tx.kasir_id !== void_by_id) {
-      throw new Error('Anda hanya dapat membatalkan transaksi yang Anda buat sendiri');
+      throw httpError(403, 'Anda hanya dapat membatalkan transaksi yang Anda buat sendiri');
     }
 
     // 🔒 Validasi batas waktu void (24 jam)
